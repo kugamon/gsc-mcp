@@ -1,0 +1,16 @@
+query,page,clicks,impressions,ctr,position
+how to build a kpi dashboard,https://northwind-analytics.example/guides/kpi-dashboard,88,14200,0.0062,4.6
+how to build a kpi dashboard,https://northwind-analytics.example/blog/kpi-dashboard-examples,5,3100,0.0016,14.9
+kpi dashboard examples,https://northwind-analytics.example/blog/kpi-dashboard-examples,21,4800,0.0044,8.8
+kpi dashboard examples,https://northwind-analytics.example/guides/kpi-dashboard,8,1600,0.0050,11.2
+self serve bi tool,https://northwind-analytics.example/product/dashboards,41,2140,0.0192,7.1
+self serve bi tool,https://northwind-analytics.example/blog/self-serve-bi-guide,13,840,0.0155,10.4
+no code reporting tool,https://northwind-analytics.example/product/dashboards,30,1620,0.0185,8.0
+no code reporting tool,https://northwind-analytics.example/blog/choosing-a-bi-tool,11,590,0.0186,12.2
+metabase alternative,https://northwind-analytics.example/compare/metabase,19,1420,0.0134,12.6
+looker alternative for small teams,https://northwind-analytics.example/compare/looker,14,980,0.0143,13.4
+northwind analytics pricing,https://northwind-analytics.example/pricing,96,410,0.2341,1.4
+warehouse dashboard tool,https://northwind-analytics.example/product/dashboards,33,1870,0.0176,9.3
+what is a semantic layer,https://northwind-analytics.example/guides/semantic-layer,64,9800,0.0065,5.1
+connect snowflake to dashboard,https://northwind-analytics.example/integrations/snowflake,26,1180,0.0220,5.4
+northwind database sample,https://northwind-analytics.example/,4,28400,0.0001,42.1

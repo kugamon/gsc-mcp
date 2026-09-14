@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "gsc-server": {
+      "command": "bash",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/server/run-server.sh"],
+      "env": {
+        "GSC_CREDENTIALS_PATH": "",
+        "GSC_OAUTH_CLIENT_SECRETS_FILE": "",
+        "GSC_DATA_STATE": "all",
+        "GSC_ALLOW_DESTRUCTIVE": "false"
+      }
+    }
+  }
+}

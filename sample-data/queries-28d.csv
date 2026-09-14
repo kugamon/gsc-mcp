@@ -1,0 +1,26 @@
+query,clicks,impressions,ctr,position
+northwind analytics,412,1840,0.2239,1.2
+northwind,208,3120,0.0667,1.8
+northwind analytics pricing,96,410,0.2341,1.4
+northwind analytics login,74,290,0.2552,1.1
+northwind analytics reviews,31,188,0.1649,2.6
+self serve bi tool,54,2980,0.0181,7.4
+no code reporting tool,41,2210,0.0186,8.1
+warehouse dashboard tool,33,1870,0.0176,9.3
+bi tool for small teams,28,1640,0.0171,6.8
+self service analytics platform,22,1980,0.0111,11.2
+metabase alternative,19,1420,0.0134,12.6
+looker alternative for small teams,14,980,0.0143,13.4
+mode analytics alternative,7,620,0.0113,15.9
+omni analytics vs metabase,3,410,0.0073,18.2
+how to build a kpi dashboard,88,14200,0.0062,4.6
+what is a semantic layer,64,9800,0.0065,5.1
+reverse etl vs bi,37,4100,0.0090,6.2
+kpi dashboard examples,29,6400,0.0045,8.8
+dashboard design best practices,18,3900,0.0046,11.7
+northwind database sample,4,28400,0.0001,42.1
+northwind traders database download,1,9100,0.0001,48.6
+sql server northwind schema,0,6200,0.0000,51.3
+connect snowflake to dashboard,26,1180,0.0220,5.4
+embedded analytics pricing,12,860,0.0140,14.1
+data dashboard for finance teams,16,740,0.0216,7.9

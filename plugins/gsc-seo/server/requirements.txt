@@ -1,0 +1,17 @@
+# Pinned dependencies for the bundled Google Search Console MCP server.
+#
+# These are pinned, not floated, on purpose. The upstream project's most recent
+# fix (commit b3f2ab8, "pin mcp[cli]<2.0.0 to unbreak fresh installs") exists
+# because an unpinned transitive bump broke every fresh install. A plugin whose
+# server stops starting is indistinguishable from a plugin that is broken.
+#
+# To move these, see server/UPSTREAM.md — bump, run scripts/smoke-test.sh, then
+# release a new plugin version.
+
+google-api-python-client==2.194.0
+google-auth==2.49.2
+google-auth-httplib2==0.3.1
+google-auth-oauthlib==1.3.1
+mcp[cli]==1.27.2
+pydantic==2.13.4
+platformdirs==4.5.0

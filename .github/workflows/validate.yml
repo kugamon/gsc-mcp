@@ -1,0 +1,62 @@
+name: validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  structure:
+    name: Structure and manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate plugin structure
+        run: python3 scripts/validate_skills.py
+
+      - name: Check JSON parses
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, sys
+          bad = []
+          for path in pathlib.Path(".").rglob("*.json"):
+              if ".git" in path.parts:
+                  continue
+              try:
+                  json.loads(path.read_text(encoding="utf-8"))
+              except Exception as exc:
+                  bad.append(f"{path}: {exc}")
+          for line in bad:
+              print(f"error: {line}")
+          print("all JSON files parse" if not bad else f"{len(bad)} invalid")
+          sys.exit(1 if bad else 0)
+          PY
+
+      - name: Check shell scripts
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+          shellcheck plugins/gsc-seo/server/run-server.sh scripts/smoke-test.sh
+
+      - name: Byte-compile the vendored server
+        run: python3 -m py_compile plugins/gsc-seo/server/gsc_server.py
+
+  smoke:
+    name: Server starts and speaks MCP
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Smoke test
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          chmod +x scripts/smoke-test.sh plugins/gsc-seo/server/run-server.sh
+          ./scripts/smoke-test.sh

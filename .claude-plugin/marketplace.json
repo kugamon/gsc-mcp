@@ -1,0 +1,25 @@
+{
+  "name": "gsc-seo-marketplace",
+  "owner": { "name": "Kugamon" },
+  "plugins": [
+    {
+      "name": "gsc-seo",
+      "source": "./plugins/gsc-seo",
+      "description": "Google Search Console for Claude — a bundled MCP server plus SEO analysis skills and commands for keyword reporting, indexing audits, and sitemap diagnostics.",
+      "version": "1.0.0",
+      "author": { "name": "Kugamon" },
+      "homepage": "https://github.com/kugamon/gsc-mcp",
+      "license": "MIT",
+      "keywords": [
+        "google-search-console",
+        "seo",
+        "search-analytics",
+        "indexing",
+        "sitemaps",
+        "mcp",
+        "claude-desktop",
+        "cowork"
+      ]
+    }
+  ]
+}

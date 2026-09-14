@@ -1,0 +1,13 @@
+url,coverage_state,google_canonical,declared_canonical,last_crawl,robots_txt_state,indexing_state
+https://northwind-analytics.example/,Submitted and indexed,https://northwind-analytics.example/,https://northwind-analytics.example/,2026-09-12,ALLOWED,INDEXING_ALLOWED
+https://northwind-analytics.example/pricing,Submitted and indexed,https://northwind-analytics.example/pricing,https://northwind-analytics.example/pricing,2026-09-11,ALLOWED,INDEXING_ALLOWED
+https://northwind-analytics.example/product/dashboards,Submitted and indexed,https://northwind-analytics.example/product/dashboards,https://northwind-analytics.example/product/dashboards,2026-09-10,ALLOWED,INDEXING_ALLOWED
+https://northwind-analytics.example/guides/kpi-dashboard,Submitted and indexed,https://northwind-analytics.example/guides/kpi-dashboard,https://northwind-analytics.example/guides/kpi-dashboard,2026-09-12,ALLOWED,INDEXING_ALLOWED
+https://northwind-analytics.example/compare/omni,Crawled - currently not indexed,,https://northwind-analytics.example/compare/omni,2026-08-29,ALLOWED,INDEXING_ALLOWED
+https://northwind-analytics.example/compare/lightdash,Discovered - currently not indexed,,https://northwind-analytics.example/compare/lightdash,,ALLOWED,INDEXING_ALLOWED
+https://northwind-analytics.example/blog/kpi-dashboard-examples,"Duplicate, Google chose different canonical",https://northwind-analytics.example/guides/kpi-dashboard,https://northwind-analytics.example/blog/kpi-dashboard-examples,2026-09-08,ALLOWED,INDEXING_ALLOWED
+https://northwind-analytics.example/docs/api,Excluded by 'noindex' tag,,https://northwind-analytics.example/docs/api,2026-09-05,ALLOWED,INDEXING_NOT_ALLOWED
+https://northwind-analytics.example/admin/dashboard,Blocked by robots.txt,,,,DISALLOWED,
+https://northwind-analytics.example/resources/old-webinar,Page with redirect,https://northwind-analytics.example/resources/webinars,,2026-07-22,ALLOWED,INDEXING_ALLOWED
+https://northwind-analytics.example/careers,Soft 404,,https://northwind-analytics.example/careers,2026-09-02,ALLOWED,INDEXING_ALLOWED
+https://northwind-analytics.example/integrations/bigquery,Server error (5xx),,,2026-09-13,ALLOWED,

@@ -1,0 +1,13 @@
+page,clicks,impressions,ctr,position
+https://northwind-analytics.example/,486,5240,0.0928,2.1
+https://northwind-analytics.example/guides/kpi-dashboard,117,20600,0.0057,5.8
+https://northwind-analytics.example/pricing,96,4180,0.0230,4.2
+https://northwind-analytics.example/product/dashboards,71,4890,0.0145,7.6
+https://northwind-analytics.example/guides/semantic-layer,64,9800,0.0065,5.1
+https://northwind-analytics.example/compare/metabase,19,1420,0.0134,12.6
+https://northwind-analytics.example/blog/self-serve-bi-guide,17,2740,0.0062,9.9
+https://northwind-analytics.example/blog/choosing-a-bi-tool,14,2390,0.0059,10.8
+https://northwind-analytics.example/compare/looker,14,980,0.0143,13.4
+https://northwind-analytics.example/integrations/snowflake,26,1180,0.0220,5.4
+https://northwind-analytics.example/about,9,620,0.0145,6.3
+https://northwind-analytics.example/blog/kpi-dashboard-examples,8,5900,0.0014,12.4

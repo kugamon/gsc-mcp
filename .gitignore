@@ -1,0 +1,20 @@
+# Credentials — never commit these. See docs/setup-service-account.md.
+*credentials*.json
+client_secret*.json
+service_account*.json
+token.json
+*.pem
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# macOS
+.DS_Store
+
+# Local scratch
+/tmp/
+*.local.md
