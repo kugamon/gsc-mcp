@@ -45,6 +45,7 @@ loudly to stderr.
 | `plugins/gsc-seo/commands/` | Six slash commands |
 | `plugins/gsc-seo/profiles/` | Example site profile and where to keep your real one |
 | `docs/` | Setup, troubleshooting, tool reference, this file |
+| `docs/modernization.md` | Review of the vendored server against the current MCP spec and SDK, with what belongs upstream vs. here |
 | `sample-data/` | Synthetic GSC exports for demoing without a connected property |
 | `evals/evals.json` | One behavioral prompt per skill |
 | `scripts/validate_skills.py` | Structural validation, run by CI |
