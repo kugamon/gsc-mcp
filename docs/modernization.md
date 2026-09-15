@@ -141,6 +141,15 @@ real per-site quota is **2,000 queries per day and 600 per minute** — the 10-U
 cap is about the serial design being unbearable at larger sizes, not about the
 quota.
 
+**This is already breaking real users.** Upstream issue
+[#31](https://github.com/AminForou/mcp-gsc/issues/31) reports that a 10-URL
+batch against an `sc-domain:` property takes 70–100 s and exceeds the MCP
+client's 60 s timeout, surfacing as `MCP error -32001: Request timed out`;
+splitting into two batches of 5 succeeds. Note that PR #52 does **not** fix
+this — moving the calls off the event loop does not make a sequential loop
+faster. It is the prerequisite: the calls have to be off the loop before they
+can be gathered concurrently.
+
 Bounded concurrency fixes both: a semaphore of 5–10 over the thread offload from
 1.1, sized against 600 QPM rather than a round number.
 
@@ -455,15 +464,21 @@ Our exact pin means there is no urgency. This can wait for upstream.
 
 **As upstream PRs, highest value first:**
 
-3. **Thread-offload the 22 `.execute()` calls** (1.1). Mechanical, and the
-   correctness win is real.
+3. ~~**Thread-offload the 22 `.execute()` calls**~~ (1.1). **Submitted
+   2026-09-14 as AminForou/mcp-gsc#52.** Tools stay `async`, so it preserves
+   upstream's documented convention. Measured 1.27 s → 0.28 s for 5 concurrent
+   calls at 250 ms latency, with a regression test verified to fail on their
+   `main`.
 4. **Typed returns with output schemas** (2.1 + 2.2). Removes double-encoding
    from every response and gives clients something to validate.
 5. **Surface `metadata.first_incomplete_date`** (1.5). Small, and it replaces a
    rule of thumb with a fact the API already returns.
 6. **Tool annotations** (2.4). An afternoon.
-7. **Proper error semantics** (2.3). Raise as a convention discussion first —
-   it contradicts upstream's documented pattern.
+7. ~~**Proper error semantics**~~ (2.3). **Raised 2026-09-14 as
+   AminForou/mcp-gsc#53**, as a discussion rather than a PR because it
+   contradicts upstream's documented pattern. Probing both patterns showed the
+   human-readable message survives either way, so it is not the trade it
+   looks like.
 8. **Bounded concurrency and backoff** (1.2 + 1.3). Removes the artificial
    10-URL cap.
 9. **Tasks extension** (3.1). The one that changes what the server can do.
