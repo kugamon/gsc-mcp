@@ -27,6 +27,39 @@ PYTHON_VERSION="3.11"
 
 log() { printf '[gsc-seo] %s\n' "$*" >&2; }
 
+# ------------------------------------------------------- per-machine config --
+# Credentials differ per machine and must not live in the plugin directory:
+# plugin directories are replaced wholesale on update, so anything configured
+# inside one is lost at the next version bump. Instead read an optional
+# key=value file from the user's config directory.
+#
+#   ~/.config/gsc-mcp/env
+#     GSC_CREDENTIALS_PATH=/Users/you/.config/gsc-mcp/credentials.json
+#     GSC_SKIP_OAUTH=true
+#
+# Values already set in the environment win, so anything explicitly configured
+# in .mcp.json still takes precedence. The file is parsed as key=value rather
+# than sourced, so a stray command in it cannot execute.
+CONFIG_FILE="${GSC_ENV_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/gsc-mcp/env}"
+if [[ -f "$CONFIG_FILE" ]]; then
+  while IFS= read -r raw || [[ -n "$raw" ]]; do
+    [[ "$raw" =~ ^[[:space:]]*# ]] && continue
+    [[ "$raw" =~ ^[[:space:]]*$ ]] && continue
+    [[ "$raw" != *=* ]] && continue
+    key="${raw%%=*}"
+    value="${raw#*=}"
+    key="${key//[[:space:]]/}"
+    value="${value#\"}"; value="${value%\"}"
+    value="${value#\'}"; value="${value%\'}"
+    [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || continue
+    # Only fill in what is unset or empty.
+    if [[ -z "${!key:-}" ]]; then
+      export "$key=$value"
+    fi
+  done < "$CONFIG_FILE"
+  log "loaded config from $CONFIG_FILE"
+fi
+
 if [[ ! -f "$SERVER_PY" ]]; then
   log "FATAL: gsc_server.py not found at $SERVER_PY"
   log "The plugin install looks incomplete. Reinstall from https://github.com/kugamon/gsc-mcp"

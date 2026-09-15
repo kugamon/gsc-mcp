@@ -1,7 +1,7 @@
 ---
 name: gsc-seo-analysis
 plugin: gsc-seo
-version: 1.0.0
+version: 1.0.1
 description: >
   Analyze Google Search Console data and turn it into SEO decisions. Use when the
   user asks to "analyze SEO performance", "check search console data", "review

@@ -66,25 +66,26 @@ Repeat per property. There is no account-wide grant.
 
 ## 5. Point the plugin at the key
 
-Edit `plugins/gsc-seo/.mcp.json` — or the equivalent block in your Claude
-config — and set the absolute path:
+Create `~/.config/gsc-mcp/env`:
 
-```json
-{
-  "mcpServers": {
-    "gsc-server": {
-      "command": "bash",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/server/run-server.sh"],
-      "env": {
-        "GSC_CREDENTIALS_PATH": "/Users/you/.config/gsc-mcp/credentials.json",
-        "GSC_SKIP_OAUTH": "true",
-        "GSC_DATA_STATE": "all",
-        "GSC_ALLOW_DESTRUCTIVE": "false"
-      }
-    }
-  }
-}
+```bash
+cat > ~/.config/gsc-mcp/env <<'EOF'
+GSC_CREDENTIALS_PATH=/Users/you/.config/gsc-mcp/credentials.json
+GSC_SKIP_OAUTH=true
+GSC_DATA_STATE=all
+GSC_ALLOW_DESTRUCTIVE=false
+EOF
+chmod 600 ~/.config/gsc-mcp/env
 ```
+
+Use an absolute path — `~` is not expanded inside this file.
+
+**Configure it here, not in the plugin.** `plugins/gsc-seo/.mcp.json` ships with
+an empty `GSC_CREDENTIALS_PATH` on purpose. You *can* edit the installed copy,
+but plugin directories are replaced wholesale on update, so that configuration
+disappears at the next version bump — and a machine-specific path has no
+business in a shared repo. The launcher reads this file at startup instead, and
+anything explicitly set in `.mcp.json` still takes precedence over it.
 
 `GSC_SKIP_OAUTH=true` tells the server not to fall back to a browser login flow
 when the service account is the intended path. Without it, a credentials problem
@@ -92,6 +93,10 @@ surfaces as a surprise browser window instead of a clear error.
 
 Leave `GSC_ALLOW_DESTRUCTIVE` at `false` unless you have a specific reason — see
 [destructive operations](#destructive-operations) below.
+
+The file is parsed as `key=value`, not sourced as a shell script, so a stray
+command in it cannot execute. Override its location with `GSC_ENV_FILE` if you
+keep config somewhere else.
 
 ## 6. Restart and verify
 
@@ -115,6 +120,9 @@ effect for that property — that is almost always the cause.
 | `GSC_CONFIG_DIR` | No | OS config dir | Where OAuth tokens are cached |
 | `GSC_PYTHON` | No | auto | Absolute path to a Python 3.11+ interpreter, if the launcher cannot find one |
 | `GSC_VENV` | No | `server/.venv` | Where the fallback virtualenv lives |
+| `GSC_ENV_FILE` | No | `~/.config/gsc-mcp/env` | Where the launcher reads per-machine config from |
+
+All of these can go in `~/.config/gsc-mcp/env`.
 
 ## Destructive operations
 

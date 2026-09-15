@@ -1,5 +1,28 @@
 # Changelog
 
+## v1.0.1 — 2026-09-14
+
+Per-machine configuration, found by actually installing it.
+
+### Fixed
+
+- **Credentials had nowhere to live.** `.mcp.json` shipped with an empty
+  `GSC_CREDENTIALS_PATH` and no documented way to fill it in that survived an
+  update — the only option was editing the installed plugin's config, which is
+  replaced wholesale on the next version bump. The launcher now reads an
+  optional `key=value` file from `~/.config/gsc-mcp/env` (override with
+  `GSC_ENV_FILE`), outside the plugin directory. Values already set in the
+  environment win, so anything explicit in `.mcp.json` still takes precedence.
+  The file is parsed, not sourced, so a stray command in it cannot execute.
+- Setup and troubleshooting docs updated to configure credentials there, with
+  a log line (`[gsc-seo] loaded config from …`) to confirm it was picked up.
+
+### Verified end to end
+
+First real install: service account → two properties visible at `siteFullUser`
+→ live search analytics returned → launcher started clean under the smoke test
+with nothing preset in the environment.
+
 ## v1.0.0 — 2026-09-14
 
 First published release. A rebuild of an unpublished internal plugin that had

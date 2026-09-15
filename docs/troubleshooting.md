@@ -49,6 +49,13 @@ Users and permissions, for **each** property. There is no account-wide grant,
 and nothing about the credentials file hints that this step is missing. This is
 the most common setup failure by a wide margin.
 
+**Configuration not picked up at all?** Check the MCP logs for
+`[gsc-seo] loaded config from …`. If that line is absent, the launcher found no
+`~/.config/gsc-mcp/env` — check the path and that it is readable. If you
+configured credentials by editing the installed plugin's `.mcp.json` and they
+stopped working after an update, that is why the env file exists: plugin
+directories are replaced wholesale on update.
+
 **OAuth:** you signed in with an account that does not own the properties. Call
 `reauthenticate` and pick the right account.
 
