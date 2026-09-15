@@ -157,6 +157,13 @@ EXPECTED_SKILLS = {
     "gsc-seo-analysis",
     "gsc-indexing-diagnostics",
     "gsc-site-profile",
+    "gsc-report",
+}
+
+# Assets the skills reference by path. A skill promising a template that isn't
+# there fails at the worst moment — mid-report, in front of whoever asked for it.
+EXPECTED_ASSETS = {
+    "report-template.html",
 }
 
 
@@ -320,11 +327,34 @@ def check_no_secrets() -> None:
                 error(f"{path.relative_to(ROOT)} looks like it contains {label} — do not commit")
 
 
+def check_assets() -> None:
+    assets_dir = PLUGIN / "assets"
+    for name in sorted(EXPECTED_ASSETS):
+        path = assets_dir / name
+        if not path.exists():
+            error(f"missing assets/{name}")
+            continue
+        if path.suffix == ".html":
+            text = path.read_text(encoding="utf-8")
+            # The print stylesheet is the whole point of the template.
+            for required in ("@page", "@media print", "page-break-inside"):
+                if required not in text:
+                    error(f"assets/{name} has no {required} rule — it will not print correctly")
+            # Charts must stay dependency-free; a CDN script would break
+            # offline, in email, and in any air-gapped review.
+            if "<script src=" in text:
+                error(
+                    f"assets/{name} loads an external script. Charts are inline "
+                    "SVG on purpose — see the gsc-report skill."
+                )
+
+
 def main() -> int:
     version = check_manifests()
     check_mcp_config()
     check_skills(version)
     check_commands()
+    check_assets()
     check_server()
     check_doc_links()
     check_no_secrets()

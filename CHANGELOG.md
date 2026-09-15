@@ -1,5 +1,55 @@
 # Changelog
 
+## v1.1.0 — 2026-09-14
+
+Designed, print-ready reports styled in the site's own brand.
+
+### Added
+
+- **`gsc-report` skill.** Renders a completed analysis as a self-contained HTML
+  document — KPI cards, charts, tables with status pills, colour-coded callouts
+  and numbered recommendations. Chat stays the default; this fires when you ask
+  for "a report", "a PDF", "something I can send".
+- **`assets/report-template.html`.** The document itself. Brand tokens live in a
+  single `:root` block; everything else is site-agnostic.
+- **Brand extraction, in `gsc-site-profile`.** Reads *computed* styles from the
+  live site rather than parsing CSS, so custom properties, framework classes and
+  webfonts are already resolved. Includes an area-weighted colour census that
+  ranks colours by how much of the page they actually paint — which is what
+  separates the two or three brand colours from the dozens a stylesheet
+  declares. Cached in the profile, so it runs once per site.
+- **Asset validation in CI.** The template is checked for `@page`, `@media
+  print` and `page-break-inside` rules, and fails the build if it ever grows an
+  external `<script src>`. Both guards are tamper-tested.
+
+### PDF, without a PDF dependency
+
+The template is print-optimised — A4 page box, repeating table headers, and
+break guards so no card, chart or table row is ever split across a page. **Cmd-P
+→ Save as PDF produces the document.** That is deliberately the whole story: no
+headless Chromium, no WeasyPrint, nothing in the launcher that can break on a
+customer's machine in six months.
+
+### Charts: one path, not two
+
+Charts are **inline SVG with a ~30-line inline script** for hover tooltips. No
+charting library, no CDN.
+
+This started as a Chart.js layer over an SVG fallback. Two things killed that:
+the CDN's SRI hash could not be retrieved to verify, and a guessed integrity
+hash silently blocks the script rather than failing loudly. The single-path
+design turned out to be strictly better anyway — identical on screen, in print,
+in an emailed file and offline; no third-party request from a document
+containing a client's traffic data; and one copy of the numbers, so a chart
+cannot disagree with the table beside it.
+
+### Verified
+
+Rendered against six months of live data with tokens extracted from
+kugamon.com: Typekit webfont confirmed loaded rather than falling back, `@page`
+rule parsed, 16 print rules active with break guards on cards, charts, rows and
+repeating table headers, zero external scripts.
+
 ## v1.0.1 — 2026-09-14
 
 Per-machine configuration, found by actually installing it.

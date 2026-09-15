@@ -43,7 +43,8 @@ loudly to stderr.
 | `~/.config/gsc-mcp/env` | Not in the repo. Per-machine `key=value` config (credentials path, data state) read by the launcher, kept outside the plugin so it survives updates |
 | `plugins/gsc-seo/server/requirements.txt` | Pinned dependencies |
 | `plugins/gsc-seo/server/UPSTREAM.md` | Provenance and the re-sync procedure |
-| `plugins/gsc-seo/skills/` | Three skills — analysis, indexing diagnostics, site profile |
+| `plugins/gsc-seo/skills/` | Four skills — analysis, indexing diagnostics, site profile, report rendering |
+| `plugins/gsc-seo/assets/report-template.html` | Print-ready report template. Brand tokens in one `:root` block; inline-SVG charts, no chart library |
 | `plugins/gsc-seo/commands/` | Six slash commands |
 | `plugins/gsc-seo/profiles/` | Example site profile and where to keep your real one |
 | `docs/` | Setup, troubleshooting, tool reference, this file |

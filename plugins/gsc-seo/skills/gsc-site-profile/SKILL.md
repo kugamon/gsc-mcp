@@ -1,13 +1,17 @@
 ---
 name: gsc-site-profile
 plugin: gsc-seo
-version: 1.0.1
+version: 1.1.0
 description: >
   Create or update the site profile that makes SEO reports specific to one
   business instead of generic. Use when the user says "set up my site profile",
   "configure gsc-seo for my site", "the reports are too generic", "teach it
   about our keywords", "add our competitors", "which pages should it prioritize",
-  or when a GSC analysis is being run for a site that has no profile yet.
+  or when a GSC analysis is being run for a site that has no profile yet. Also
+  covers extracting the site's brand tokens — fonts, colours, webfont
+  stylesheet — from the live site, which is what lets gsc-report style documents
+  in the company's own design; use it when the user asks to "match our branding",
+  "use our fonts and colours", or reports that a document looks generic.
 ---
 
 # Site profile
@@ -96,7 +100,94 @@ Ordered by commercial value, highest first:
 - <site migration dates, redesigns, or anything that explains a step change>
 - <seasonality>
 - <deliberate exclusions — pages that are noindexed on purpose>
+
+## Brand tokens
+Used by the gsc-report skill to style documents in the site's own design.
+Extracted from the live site; see "Extracting brand tokens" below.
+
+| Token | Value |
+| --- | --- |
+| Font stylesheet | <public webfont CSS URL, or "none"> |
+| Heading font | <computed font-family of h1> |
+| Body font | <computed font-family of body> |
+| Dark / headings | #______ |
+| Accent / links / CTA | #______ |
+| Body text | #______ |
+| Page background | #______ |
+| Border | #______ |
+
+Extracted <date> from <url>.
 ```
+
+## Extracting brand tokens
+
+Run this once per site. The result is cached in the profile, so reports after
+the first cost nothing.
+
+**Read computed styles from the live site, don't parse the CSS.** Parsing
+stylesheets means resolving custom properties, framework classes and cascade
+order by hand, and then guessing which of forty declared colours is the brand
+one. `getComputedStyle` has already done all of that — it reports what actually
+rendered.
+
+Open the site's homepage in a browser and run:
+
+```js
+(() => {
+  const hex = v => {
+    if (!v || !v.startsWith('rgb')) return v;
+    const n = v.match(/\d+(\.\d+)?/g).map(Number);
+    if (n.length >= 4 && n[3] === 0) return 'transparent';
+    return '#' + n.slice(0,3).map(x => x.toString(16).padStart(2,'0')).join('');
+  };
+  const cs = s => { const e = document.querySelector(s); return e ? getComputedStyle(e) : null; };
+  const body = cs('body'), h1 = cs('h1') || cs('h2'), a = cs('a[href]');
+
+  // Area-weighted colour census: which colours the page is actually made of,
+  // not which colours appear somewhere in the stylesheet.
+  const census = {};
+  [...document.querySelectorAll('*')].slice(0, 3000).forEach(e => {
+    const s = getComputedStyle(e), r = e.getBoundingClientRect();
+    if (r.width < 4 || r.height < 4) return;
+    if (s.backgroundColor && s.backgroundColor !== 'rgba(0, 0, 0, 0)') {
+      const h = hex(s.backgroundColor);
+      census[h] = (census[h] || 0) + Math.round(r.width * r.height / 1000);
+    }
+  });
+
+  return {
+    fontStylesheets: [...document.querySelectorAll('link[rel="stylesheet"]')]
+      .map(l => l.href).filter(h => /typekit|fonts\.googleapis|fonts\.net|cloud\.typography/i.test(h)),
+    headingFont: h1 && h1.fontFamily,
+    bodyFont: body.fontFamily,
+    headingColor: h1 && hex(h1.color),
+    linkColor: a && hex(a.color),
+    bodyText: hex(body.color),
+    pageBg: hex(body.backgroundColor),
+    topColours: Object.entries(census).sort((x, y) => y[1] - x[1]).slice(0, 8)
+  };
+})()
+```
+
+Reading the result:
+
+- **`topColours` is ranked by painted area**, so the page background lands
+  first, the brand's dark band second, and the CTA colour third. That ordering
+  is the point — it separates the two or three colours the site is built from
+  out of the dozens it declares.
+- **`headingColor` is usually the dark token**, `linkColor` usually the accent.
+  Check them against `topColours`; when they agree, you have it.
+- **The font stylesheet matters more than the font name.** A heading font of
+  `itc-avant-garde-gothic-pro` is worthless in a standalone file unless the
+  Typekit or Google Fonts CSS URL comes with it. If there is no public
+  stylesheet URL, record the family anyway and let the fallback stack carry it —
+  do not substitute a lookalike font and call it the brand.
+- Grab the border colour from any hairline the site uses; `#e5e5e5`-ish neutrals
+  are typical and a sensible default if none is found.
+
+Confirm the palette with the user before saving it. Extraction gets the dark and
+accent right most of the time, and "most of the time" is not good enough for
+something going to a client.
 
 ## Keeping it honest
 

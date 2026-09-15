@@ -55,6 +55,7 @@ decisions.
 | Reports are generic because Claude does not know the business | `gsc-site-profile` | Builds a site profile from existing GSC data, stored outside the plugin so updates do not erase it |
 | The server silently stopped working and the plugin still looked installed | `/gsc-doctor` | Walks launcher, config, auth, and per-call failures in dependency order |
 | An agent with delete access to your Search Console account | Built in | `GSC_ALLOW_DESTRUCTIVE` ships `false`; the skills refuse to flip it for you |
+| A report you'd be embarrassed to send a client | `gsc-report` | Print-ready HTML in the site's own fonts and colours — KPI cards, charts, colour-coded findings. Cmd-P saves a proper PDF, with no rendering dependency to install |
 
 ## Prerequisites
 
@@ -75,7 +76,8 @@ decisions.
 | --- | --- | --- |
 | `gsc-seo-analysis` | "analyze SEO performance", "check search console", "keyword rankings", "why did traffic drop" | Metric interpretation, branded/non-branded, CTR benchmarks, five analysis workflows, report structure |
 | `gsc-indexing-diagnostics` | "not indexed", "Couldn't fetch", "blocked by robots.txt", "audit indexing" | Status-by-status decoding, the robots.txt trap, crawl acceleration ranked by what works, migration checklist |
-| `gsc-site-profile` | "set up my site profile", "the reports are too generic" | Building the profile that makes reports business-specific, and where to keep it |
+| `gsc-site-profile` | "set up my site profile", "the reports are too generic", "use our branding" | Building the profile that makes reports business-specific, extracting brand tokens from the live site, and where to keep it |
+| `gsc-report` | "as a report", "as a PDF", "something I can send" | Rendering a finished analysis as a print-ready HTML document styled in the site's own fonts and colours |
 
 ## Commands
 
@@ -114,9 +116,10 @@ gsc-mcp/
     └── gsc-seo/                      # ← the installable plugin
         ├── .claude-plugin/plugin.json
         ├── .mcp.json                 # all paths ${CLAUDE_PLUGIN_ROOT}-relative
-        ├── server/                   # vendored MCP server + launcher + pins
-        ├── skills/                   # 3 skills
+        ├── server/                   # vendored MCP server + tests + launcher + pins
+        ├── skills/                   # 4 skills
         ├── commands/                 # 6 slash commands
+        ├── assets/                   # print-ready report template
         └── profiles/                 # example site profile
 ```
 

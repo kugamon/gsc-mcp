@@ -1,7 +1,7 @@
 ---
 name: gsc-seo-analysis
 plugin: gsc-seo
-version: 1.0.1
+version: 1.1.0
 description: >
   Analyze Google Search Console data and turn it into SEO decisions. Use when the
   user asks to "analyze SEO performance", "check search console data", "review
@@ -178,6 +178,11 @@ Structure that works:
 Say what the data does not cover. GSC has no conversion data, a 16-month
 history limit, and omits anonymized low-volume queries — which can be a large
 share of the true long tail.
+
+**If the user wants this as a file rather than as chat** — "as a report", "as a
+PDF", "something I can send" — hand off to the `gsc-report` skill once the
+analysis is done. It renders a print-ready HTML document styled in the site's
+own brand. Do the thinking first; that skill only handles presentation.
 
 ## Argument reference
 

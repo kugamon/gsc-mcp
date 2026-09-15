@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{REPORT_TITLE}}</title>
+
+<!-- BRAND WEBFONT. Use the stylesheet URL found during brand extraction
+     (e.g. a Typekit or Google Fonts CSS). Delete this line if the site has
+     no publicly loadable webfont — the fallback stack below still applies. -->
+<link rel="stylesheet" href="{{FONT_STYLESHEET_URL}}">
+
+<style>
+/* ============================================================
+   BRAND TOKENS — the only block that changes between sites.
+   Filled from the site profile's brand tokens. Everything below
+   is site-agnostic; do not edit it per report.
+   ============================================================ */
+:root {
+  --font-heading: {{FONT_HEADING}};
+  --font-body:    {{FONT_BODY}};
+
+  --brand-dark:   {{COLOR_DARK}};    /* headings, dark bands, chart series 2 */
+  --brand-accent: {{COLOR_ACCENT}};  /* links, CTAs, chart series 1 */
+  --text:         {{COLOR_TEXT}};
+  --page-bg:      {{COLOR_BG}};
+  --border:       {{COLOR_BORDER}};
+
+  /* Status ramp — derived, not extracted. Contrast-checked on white. */
+  --good:    #1a7f5a;  --good-bg: #e8f5ef;
+  --warn:    #9a6700;  --warn-bg: #fff6e0;
+  --bad:     #b3261e;  --bad-bg:  #fdeceb;
+
+  --muted:   #5c6673;
+  --surface: #f7f8fa;
+  --radius:  6px;
+}
+
+/* ===================== base ===================== */
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--text);
+  background: var(--page-bg);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.sheet { max-width: 1040px; margin: 0 auto; padding: 0 40px 64px; }
+h1, h2, h3, .kpi-value {
+  font-family: var(--font-heading);
+  color: var(--brand-dark);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+h1 { font-size: 34px; line-height: 1.15; margin: 0 0 6px; }
+h2 { font-size: 21px; margin: 40px 0 14px; padding-bottom: 8px; border-bottom: 2px solid var(--brand-dark); }
+h3 { font-size: 16px; margin: 24px 0 8px; font-weight: 500; }
+p  { margin: 0 0 12px; }
+a  { color: var(--brand-accent); }
+.lede { font-size: 17px; line-height: 1.5; }
+.muted { color: var(--muted); }
+.small { font-size: 12.5px; }
+
+/* ===================== masthead ===================== */
+.masthead { background: var(--brand-dark); color: #fff; padding: 34px 40px 30px; }
+.masthead-inner { max-width: 1040px; margin: 0 auto; }
+.masthead h1 { color: #fff; }
+.masthead .meta { font-size: 13px; opacity: .85; margin: 10px 0 0; }
+.rule { height: 4px; background: var(--brand-accent); margin-bottom: 32px; }
+
+/* ===================== KPI cards ===================== */
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.kpi { border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; background: #fff; }
+.kpi-label { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 6px; }
+.kpi-value { font-size: 27px; line-height: 1.1; }
+.kpi-note  { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.kpi[data-tone="good"] { border-left: 4px solid var(--good); border-radius: 0 var(--radius) var(--radius) 0; }
+.kpi[data-tone="warn"] { border-left: 4px solid var(--warn); border-radius: 0 var(--radius) var(--radius) 0; }
+.kpi[data-tone="bad"]  { border-left: 4px solid var(--bad);  border-radius: 0 var(--radius) var(--radius) 0; }
+
+/* ===================== callouts ===================== */
+.callout { border-left: 4px solid var(--brand-accent); background: var(--surface); padding: 14px 18px; margin: 18px 0; border-radius: 0 var(--radius) var(--radius) 0; }
+.callout[data-tone="good"] { border-color: var(--good); background: var(--good-bg); }
+.callout[data-tone="warn"] { border-color: var(--warn); background: var(--warn-bg); }
+.callout[data-tone="bad"]  { border-color: var(--bad);  background: var(--bad-bg); }
+.callout h3 { margin: 0 0 4px; }
+
+/* ===================== tables ===================== */
+table { width: 100%; border-collapse: collapse; margin: 14px 0 6px; font-size: 13.5px; }
+thead th {
+  text-align: left; font-family: var(--font-heading); font-weight: 500; font-size: 11.5px;
+  text-transform: uppercase; letter-spacing: .05em; color: #fff; background: var(--brand-dark);
+  padding: 9px 12px;
+}
+tbody td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+tbody tr:nth-child(even) { background: var(--surface); }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.url { font-size: 12.5px; word-break: break-word; }
+
+.pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+.pill[data-tone="good"] { background: var(--good-bg); color: var(--good); }
+.pill[data-tone="warn"] { background: var(--warn-bg); color: var(--warn); }
+.pill[data-tone="bad"]  { background: var(--bad-bg);  color: var(--bad); }
+.pill[data-tone="flat"] { background: var(--surface); color: var(--muted); }
+
+/* ===================== charts =====================
+   ONE rendering path: inline SVG, authored with real numbers.
+   Interactivity is added to that same SVG by the script at the
+   bottom — no charting library, no CDN, no second data copy to
+   keep in sync. Works offline, in email, and in print unchanged.
+   ================================================== */
+.chart-wrap { position: relative; border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; margin: 16px 0; background: #fff; }
+.chart-title { font-family: var(--font-heading); font-weight: 500; font-size: 14px; color: var(--brand-dark); margin-bottom: 4px; }
+.chart-sub { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+.chart { display: block; width: 100%; height: auto; overflow: visible; }
+.chart text { font-family: var(--font-body); }
+.chart .bar, .chart .dot { transition: opacity .12s ease; cursor: default; }
+.chart-wrap.is-hover .bar, .chart-wrap.is-hover .dot { opacity: .35; }
+.chart-wrap.is-hover .bar.on, .chart-wrap.is-hover .dot.on { opacity: 1; }
+.grid-line { stroke: var(--border); stroke-width: 1; }
+.axis-label { font-size: 10.5px; fill: var(--muted); }
+
+.tip {
+  position: absolute; pointer-events: none; opacity: 0; transform: translate(-50%, -115%);
+  background: var(--brand-dark); color: #fff; font-size: 12px; line-height: 1.35;
+  padding: 6px 9px; border-radius: 4px; white-space: nowrap; z-index: 5; transition: opacity .1s;
+}
+.tip strong { display: block; font-weight: 700; }
+
+.legend { display: flex; gap: 16px; font-size: 12px; color: var(--muted); margin-top: 10px; }
+.legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+.legend .s1::before { background: var(--brand-accent); }
+.legend .s2::before { background: var(--brand-dark); }
+
+/* ===================== recommendations ===================== */
+.recs { counter-reset: rec; list-style: none; padding: 0; margin: 14px 0 0; }
+.recs li { counter-increment: rec; position: relative; padding: 16px 18px 16px 58px; border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 12px; background: #fff; }
+.recs li::before {
+  content: counter(rec); position: absolute; left: 18px; top: 15px;
+  width: 26px; height: 26px; border-radius: 50%; background: var(--brand-accent); color: #fff;
+  font-family: var(--font-heading); font-weight: 700; font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+}
+.recs h3 { margin: 0 0 4px; font-size: 15px; font-weight: 700; }
+.recs p { margin: 0; font-size: 13.5px; }
+
+/* ===================== footer ===================== */
+.foot { margin-top: 44px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); }
+
+/* ============================================================
+   PRINT — the reason this template exists.
+   Cmd-P → Save as PDF must produce a clean document.
+   ============================================================ */
+@page { size: A4; margin: 14mm 12mm 16mm; }
+
+@media print {
+  body { font-size: 10.5pt; }
+  .sheet { max-width: none; padding: 0; }
+  .masthead { padding: 18pt 14pt; }
+  .masthead-inner { max-width: none; }
+  .rule { margin-bottom: 18pt; }
+
+  .tip { display: none !important; }
+  .chart-wrap.is-hover .bar, .chart-wrap.is-hover .dot { opacity: 1 !important; }
+
+  h1 { font-size: 22pt; }
+  h2 { font-size: 14pt; margin-top: 20pt; page-break-after: avoid; break-after: avoid; }
+  h3 { page-break-after: avoid; break-after: avoid; }
+
+  .kpi, .callout, .chart-wrap, .recs li { page-break-inside: avoid; break-inside: avoid; }
+  table { page-break-inside: auto; }
+  tr    { page-break-inside: avoid; break-inside: avoid; }
+  thead { display: table-header-group; }
+  tfoot { display: table-footer-group; }
+
+  a { text-decoration: none; color: var(--brand-accent); }
+  .page-break { page-break-before: always; break-before: page; }
+  .no-print { display: none !important; }
+}
+
+@media screen and (max-width: 760px) {
+  .kpis { grid-template-columns: repeat(2, 1fr); }
+  .sheet { padding: 0 20px 40px; }
+  .masthead { padding: 24px 20px; }
+}
+</style>
+</head>
+<body>
+
+<div class="masthead">
+  <div class="masthead-inner">
+    <h1>{{REPORT_TITLE}}</h1>
+    <p class="meta">{{PROPERTY}} &nbsp;·&nbsp; {{DATE_RANGE}} &nbsp;·&nbsp; generated {{GENERATED_ON}}</p>
+  </div>
+</div>
+<div class="rule"></div>
+
+<div class="sheet">
+
+  <p class="lede">{{HEADLINE}}</p>
+
+  <div class="kpis">
+    <!-- repeat per KPI; data-tone: good | warn | bad | omit for neutral -->
+    <div class="kpi" data-tone="{{TONE}}">
+      <div class="kpi-label">{{KPI_LABEL}}</div>
+      <div class="kpi-value">{{KPI_VALUE}}</div>
+      <div class="kpi-note">{{KPI_NOTE}}</div>
+    </div>
+  </div>
+
+  <h2>{{SECTION_TITLE}}</h2>
+
+  <!-- ============ HORIZONTAL BAR CHART ============
+       viewBox is 600 wide. Label gutter 0–165, plot area 175–575.
+       Bar width = round(value / maxValue * 400).
+       Row pitch 26px; set viewBox height to rows*26 + 10.
+       data-tip is what the hover tooltip shows.
+       ============================================== -->
+  <div class="chart-wrap">
+    <div class="chart-title">{{CHART_TITLE}}</div>
+    <div class="chart-sub">{{CHART_SUBTITLE}}</div>
+    <svg class="chart" viewBox="0 0 600 {{SVG_HEIGHT}}" role="img" aria-label="{{CHART_TITLE}}">
+      <text class="axis-label" x="0" y="17">{{LABEL_1}}</text>
+      <rect class="bar" x="175" y="6" width="{{BAR_W_1}}" height="14" rx="2"
+            fill="var(--brand-accent)" data-tip="{{LABEL_1}}|{{TIP_1}}"></rect>
+      <text class="axis-label" x="{{BAR_END_1}}" y="17" font-weight="700" fill="{{COLOR_TEXT}}">{{VALUE_1}}</text>
+    </svg>
+    <div class="legend"><span class="s1">{{SERIES_1_NAME}}</span></div>
+  </div>
+
+  <!-- ============ LINE / TREND CHART ============
+       viewBox 600×180. Plot area x 40–590, y 20–150.
+       x = 40 + i/(n-1)*550 ; y = 150 - value/maxValue*130
+       Emit the polyline, then one .dot per point for hover.
+       ============================================ -->
+  <div class="chart-wrap">
+    <div class="chart-title">{{TREND_TITLE}}</div>
+    <div class="chart-sub">{{TREND_SUBTITLE}}</div>
+    <svg class="chart" viewBox="0 0 600 180" role="img" aria-label="{{TREND_TITLE}}">
+      <line class="grid-line" x1="40" y1="150" x2="590" y2="150"></line>
+      <line class="grid-line" x1="40" y1="85"  x2="590" y2="85"></line>
+      <line class="grid-line" x1="40" y1="20"  x2="590" y2="20"></line>
+      <text class="axis-label" x="0" y="24">{{Y_MAX}}</text>
+      <text class="axis-label" x="0" y="154">0</text>
+      <polyline fill="none" stroke="var(--brand-accent)" stroke-width="2"
+                stroke-linejoin="round" points="{{POINTS}}"></polyline>
+      <circle class="dot" cx="{{X_1}}" cy="{{Y_1}}" r="3.5"
+              fill="var(--brand-accent)" data-tip="{{DATE_1}}|{{TIP_1}}"></circle>
+      <text class="axis-label" x="40"  y="172">{{X_FIRST}}</text>
+      <text class="axis-label" x="560" y="172" text-anchor="end">{{X_LAST}}</text>
+    </svg>
+    <div class="legend"><span class="s1">{{TREND_SERIES_NAME}}</span></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>{{COL}}</th><th class="num">{{COL_NUM}}</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="url">{{CELL}}</td>
+        <td class="num">{{CELL_NUM}}</td>
+        <td><span class="pill" data-tone="{{TONE}}">{{STATUS}}</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout" data-tone="{{TONE}}">
+    <h3>{{CALLOUT_TITLE}}</h3>
+    <p>{{CALLOUT_BODY}}</p>
+  </div>
+
+  <h2>Recommendations</h2>
+  <ol class="recs">
+    <li>
+      <h3>{{REC_TITLE}}</h3>
+      <p>{{REC_BODY}}</p>
+    </li>
+  </ol>
+
+  <div class="foot">
+    <p>Source: Google Search Console API, property {{PROPERTY}}, {{DATE_RANGE}}. {{FRESHNESS_NOTE}}</p>
+    <p>{{CAVEATS}}</p>
+  </div>
+
+</div>
+
+<script>
+/* Hover interactivity for the SVG charts. ~30 lines, no dependency.
+   Every element carrying data-tip="Label|Detail" gets a tooltip and
+   dims its siblings. Printing ignores all of this. */
+(function () {
+  document.querySelectorAll(".chart-wrap").forEach(function (wrap) {
+    var targets = wrap.querySelectorAll("[data-tip]");
+    if (!targets.length) return;
+
+    var tip = document.createElement("div");
+    tip.className = "tip";
+    wrap.appendChild(tip);
+
+    targets.forEach(function (el) {
+      el.addEventListener("mouseenter", function () {
+        var parts = (el.dataset.tip || "").split("|");
+        tip.innerHTML = "<strong>" + parts[0] + "</strong>" + (parts[1] || "");
+        wrap.classList.add("is-hover");
+        el.classList.add("on");
+        tip.style.opacity = "1";
+      });
+      el.addEventListener("mousemove", function (e) {
+        var r = wrap.getBoundingClientRect();
+        tip.style.left = (e.clientX - r.left) + "px";
+        tip.style.top  = (e.clientY - r.top) + "px";
+      });
+      el.addEventListener("mouseleave", function () {
+        wrap.classList.remove("is-hover");
+        el.classList.remove("on");
+        tip.style.opacity = "0";
+      });
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
