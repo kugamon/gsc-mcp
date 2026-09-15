@@ -2,48 +2,60 @@
 
 A review of `plugins/gsc-seo/server/gsc_server.py` (1,705 lines, 21 tools,
 upstream v0.3.3 / commit `b3f2ab8`) against the current Model Context Protocol
-specification and Python SDK, as of September 2026.
+specification, the MCP Python SDK, and Google's Search Console API
+documentation. Last verified 2026-09-14.
 
-The server works and is well-maintained upstream. Nothing here is a bug report.
-It is a list of places where the code predates protocol features that now exist,
-and where those features would make it measurably better.
+The server works and is actively maintained upstream. Nothing here is a bug
+report. It is a list of places where the code predates capabilities that now
+exist, and where adopting them would make it measurably faster, cheaper in
+tokens, or more correct.
+
+## How claims in this document are supported
+
+Every technical claim carries its evidence, using one of four markers:
+
+| Marker | Means |
+| --- | --- |
+| **[code]** | Read directly in `gsc_server.py`, with line numbers |
+| **[sdk]** | Read in the installed SDK's own source |
+| **[probe]** | Demonstrated by running it — command included |
+| **[docs]** | Stated in vendor documentation, linked in Sources |
+
+An earlier revision of this document asserted three things that did not survive
+checking. They are marked **CORRECTED** below, with what was wrong and what is
+actually true, because a review that quietly fixes its own errors teaches the
+next reader nothing.
 
 ## The constraint this review has to respect
 
 `gsc_server.py` is vendored **byte-identical** and CI verifies its SHA-256
-against `server/UPSTREAM.md`. That is a deliberate choice (see
-`docs/architecture.md`), and it means no finding below can be "just patch it."
-Every item is tagged with where it can actually land:
+against `server/UPSTREAM.md`. Every finding is therefore tagged with where a fix
+can land:
 
 | Tag | Meaning |
 | --- | --- |
-| **Wrapper** | Fixable in this repo without touching the vendored file |
-| **Upstream** | Belongs as a PR to [AminForou/mcp-gsc](https://github.com/AminForou/mcp-gsc) — everyone benefits, we keep the hash check |
+| **Wrapper** | Fixable here without touching the vendored file |
+| **Upstream** | Belongs as a PR to AminForou/mcp-gsc — everyone benefits, we keep the hash check |
 | **Fork** | Only achievable by abandoning byte-identical vendoring |
 
-Prefer Upstream. A fork means owning 1,705 lines of someone else's code
-forever, and re-syncing becomes a merge instead of a copy.
+## Where the platform moved
 
-## Where the protocol moved
-
-Two releases happened after this server's design was set.
-
-**Spec `2026-07-28`** (final, July 2026) is the largest revision since launch: a
-stateless core with the `initialize` handshake and `Mcp-Session-Id` removed, a
-first-class extensions framework, `Mcp-Method`/`Mcp-Name` routing headers,
+**Spec `2026-07-28`** (final, 28 July 2026) is the largest revision since
+launch: a stateless core with the `initialize` handshake and `Mcp-Session-Id`
+removed, a formal extensions framework, `Mcp-Method`/`Mcp-Name` routing headers,
 `ttlMs`/`cacheScope` on list results, full JSON Schema 2020-12 for tool input
-and output schemas, and two official extensions — **Tasks** (long-running work)
-and **MCP Apps** (server-rendered HTML UIs). Roots, sampling, and MCP-level
-logging are deprecated; `ping` is removed.
+and output schemas, and two official extensions — Tasks and MCP Apps. Roots,
+sampling, and MCP-level logging are deprecated; `ping` is removed. **[docs]**
 
-**Python SDK v2.0.0** went GA in August 2026. `FastMCP` is now `MCPServer`,
-`mcp.server.fastmcp.*` moved to `mcp.server.mcpserver.*`, fields are snake_case,
-wire types split into a separate `mcp-types` distribution, OpenTelemetry
-middleware is on by default, and — the one that matters most here — **sync `def`
-tools now run on a worker thread instead of blocking the event loop.**
+**Python SDK v2** is GA. As of this review `pip install mcp` resolves to
+**2.2.0** **[probe]**: `uv run --with "mcp[cli]" python -c "import
+importlib.metadata as md; print(md.version('mcp'))"`. `FastMCP` is now
+`MCPServer`, `mcp.server.fastmcp.*` moved to `mcp.server.mcpserver.*`, fields
+are snake_case, and OpenTelemetry middleware is on by default. **[docs]**
 
-We pin `mcp[cli]==1.27.2`, so none of this has broken us. It does mean we are
-now on the previous major line.
+We pin `mcp[cli]==1.27.2` exactly, so none of this reached us. That pin is the
+reason v2's release was a non-event here, and it is also why an unpinned
+`mcp[cli]` today would silently jump two major versions.
 
 ---
 
@@ -51,243 +63,372 @@ now on the previous major line.
 
 ### 1.1 Every tool is `async def` and almost none of them await anything
 
-**Wrapper: no. Upstream: yes. Impact: high. Effort: trivial.**
+**Wrapper: no. Upstream: yes. Impact: high. Effort: low.**
 
-21 tools are declared `async def`. There are 4 `await` expressions in the entire
-file, and 22 blocking `service....execute()` calls. `google-api-python-client`
-is synchronous, so every tool call blocks the event loop for the full duration
-of an HTTPS round trip to Google.
+**[code]** 21 tools declared `async def`; 4 `await` expressions in the entire
+file; 22 blocking `service.…execute()` calls.
+`grep -c "^async def" gsc_server.py` → 21, `grep -c "await " gsc_server.py` → 4,
+`grep -c "\.execute()" gsc_server.py` → 22.
 
-On stdio with one client this is mostly invisible. It stops being invisible the
-moment anything runs concurrently — `batch_url_inspection` over ten URLs, or any
-HTTP deployment serving more than one caller.
+`google-api-python-client` is synchronous, so every tool call occupies the event
+loop for a full HTTPS round trip to Google. On stdio with a single caller this
+is mostly invisible. It stops being invisible the moment two things overlap —
+`batch_url_inspection` over ten URLs, or any HTTP deployment with more than one
+client.
 
-The fix under SDK v1 is `asyncio.to_thread(...)` around each `.execute()`.
-The fix under **v2 is to delete the word `async`** — v2 runs sync tools on a
-worker thread automatically. A 21-line diff that makes the whole file correct is
-an unusually good upstream PR.
+> **CORRECTED.** The previous revision said the fix was to "delete the word
+> `async`", because SDK v2 runs sync tools on a worker thread. That is true of
+> v2 and **false of the version this server pins**, so the advice would have
+> changed nothing.
+>
+> **[sdk]** In `mcp 1.27.2`, `FuncMetadata.call_fn_with_arg_validation` ends:
+> ```python
+> if fn_is_async:
+>     return await fn(**arguments_parsed_dict)
+> else:
+>     return fn(**arguments_parsed_dict)      # inline, on the event loop
+> ```
+> **[sdk]** In `mcp 2.2.0`, `FuncMetadata.call_fn` ends:
+> ```python
+> if fn_is_async:
+>     return await fn(**kwargs)
+> return await anyio.to_thread.run_sync(functools.partial(fn, **kwargs))
+> ```
+> Its docstring says so outright: "A sync function runs on a worker thread."
+
+**The correct fix on the pinned SDK** is to keep the tools `async` and move the
+blocking call off the loop:
+
+```python
+import anyio
+
+async def _execute(request):
+    """Run a blocking googleapiclient request off the event loop."""
+    return await anyio.to_thread.run_sync(request.execute)
+```
+
+Then each of the 22 sites becomes
+`response = await _execute(service.searchanalytics().query(...))`.
+**[code]** All 22 are single-line calls, so the edit is mechanical.
+
+Use `anyio`, not `asyncio.to_thread`, for two reasons. **[sdk]** The SDK runs
+the server under `anyio.run(...)` (`FastMCP.run`), and **[sdk]** v2 implements
+this exact offload with `anyio.to_thread.run_sync` — matching the framework's
+own choice keeps it correct under either backend. **[probe]** `anyio` is already
+a direct dependency of `mcp` (`anyio>=4.5`), so the import adds nothing to the
+dependency tree.
+
+**On efficiency.** A thread hop costs microseconds against a network call that
+costs hundreds of milliseconds, so the overhead is noise. It is still a
+workaround: `google-api-python-client` has no async interface, and the
+genuinely efficient design would issue the HTTP requests natively async. That is
+a rewrite of the transport layer, not a patch, and is out of scope here.
+**[probe]** anyio's default worker pool is 40 threads
+(`anyio.to_thread.current_default_thread_limiter().total_tokens` → 40), which
+bounds the blast radius without extra configuration.
 
 ### 1.2 Batch inspection is a sequential blocking loop
 
 **Wrapper: no. Upstream: yes. Impact: high. Effort: low.**
 
-`batch_url_inspection` (line 733) and `check_indexing_issues` (line 824) iterate
-URLs and call `.execute()` one at a time. Ten URLs is ten serial round trips —
-several seconds of wall clock where one second would do.
+**[code]** `batch_url_inspection` iterates at line 733 and
+`check_indexing_issues` at line 824, each calling `.execute()` one URL at a
+time. Ten URLs is ten serial round trips.
 
-The URL Inspection quota is roughly 600/minute and 2,000/day per property, so
-concurrency has to be bounded, not unlimited: a semaphore of 5–10 against a
-thread pool. Both tools cap input at 10 URLs (lines 728, 812) specifically to
-avoid quota trouble — a cap that exists because the serial design makes larger
-batches unbearable, not because the API requires it.
+**[code]** Both refuse more than 10 URLs (lines 728, 812) with the message
+"Please limit to 10 URLs per batch to avoid API quota issues." **[docs]** The
+real per-site quota is **2,000 queries per day and 600 per minute** — the 10-URL
+cap is about the serial design being unbearable at larger sizes, not about the
+quota.
+
+Bounded concurrency fixes both: a semaphore of 5–10 over the thread offload from
+1.1, sized against 600 QPM rather than a round number.
 
 ### 1.3 No retry or backoff on 429 and 5xx
 
 **Wrapper: no. Upstream: yes. Impact: medium-high. Effort: low.**
 
-Quota errors are recognized (lines 386, 397, 440, 451) and turned into
-`"Error: API quota exceeded. Please try again later."` — a string handed to the
-model, which then guesses whether to retry and usually retries immediately.
+**[code]** Quota conditions are recognised (lines 386, 397, 440, 451) and turned
+into strings such as `"Error: API quota exceeded. Please try again later."` —
+handed to the model, which then decides whether to retry, and typically retries
+at once.
 
-A transient 429 or 503 against a quota-limited API is the textbook case for
-exponential backoff with jitter, handled in the client rather than delegated to
-the model's judgment.
+**[docs]** Search Analytics carries two independent quotas: QPS/QPM/QPD
+(1,200 QPM per site) **and** a separate *load* quota measured in 10-minute and
+1-day windows, where cost rises with date range and with grouping or filtering
+by page and query. Retrying a load-quota rejection immediately makes it worse.
 
-### 1.4 Date ranges use naive local time
+Exponential backoff with jitter belongs in the client, not in the model's
+judgment.
 
-**Wrapper: partially. Upstream: yes. Impact: low-medium. Effort: trivial.**
+### 1.4 Date ranges are built from naive local time
 
-`datetime.now().date()` at lines 482, 910, 1021, 1023, 1298. Search Console's
-day boundaries are fixed in Pacific Time regardless of where the server runs, so
-a user in Europe asking for "the last 28 days" at 09:00 local gets a window
-shifted by a day against what the GSC dashboard shows — the kind of discrepancy
-that reads as "the API is wrong."
+**Wrapper: partially. Upstream: yes. Impact: medium. Effort: trivial.**
 
-Anchor the range to the property's reporting timezone, and state the resolved
-window in the response so the offset is visible rather than mysterious.
+**[code]** `datetime.now().date()` at lines 482, 910, 1021, 1023, 1298 — naive,
+in the server process's local timezone.
+
+**[docs]** The API reference is explicit: `startDate` and `endDate` are
+"in YYYY-MM-DD format, **in PT time (UTC - 7:00/8:00)**", and response metadata
+timestamps are "in the `America/Los_Angeles` time zone."
+
+So a caller in London asking for "the last 28 days" at 09:00 local gets a window
+shifted a day against what Search Console shows them — which reads to the user
+as the API being wrong. Anchor the window to `America/Los_Angeles` and echo the
+resolved dates in the response so any remaining offset is visible.
+
+### 1.5 The API reports which data is incomplete, and the server discards it
+
+**Wrapper: partially. Upstream: yes. Impact: medium. Effort: low.**
+*(New finding — missed by the previous revision.)*
+
+**[docs]** When `dataState` is `all`, a Search Analytics response may carry a
+`metadata` object containing `first_incomplete_date` — "the first date for which
+the data is still being collected and processed" — and, for hourly grouping,
+`first_incomplete_hour`. Google states that "all values after the
+`first_incomplete_date` may still change noticeably."
+
+**[code]** No tool reads `metadata`; every one builds its result from
+`response.get("rows", [])` only.
+
+This matters because our own skills currently tell Claude that "the last 2–3
+days are provisional" — a rule of thumb standing in for a value the API returns
+exactly. Surfacing it would replace a guess with a fact, and would let a report
+mark precisely where the provisional region starts.
 
 ---
 
 ## Tier 2 — What the model actually receives
 
-### 2.1 Structured output is returned as a string
+### 2.1 Structured data is returned as a JSON string inside a string schema
 
 **Wrapper: no. Upstream: yes. Impact: high. Effort: medium.**
 
-13 of 21 tools do the right thing and build a dict — then return
-`json.dumps(...)` with a `-> str` annotation. The SDK sees a string, so the tool
-gets no `outputSchema` and the result carries no `structuredContent`. The model
-receives JSON-as-text and has to parse it, and no client can validate it.
+**[code]** 13 of 21 tools build a dict and return `json.dumps(...)` under a
+`-> str` annotation.
 
-The installed SDK already supports this properly: return a Pydantic model,
-dataclass, or TypedDict and the framework populates `structured_content` and
-generates the output schema from the return annotation. Under spec 2026-07-28,
-output schemas are full JSON Schema 2020-12 and `structuredContent` may be any
-JSON value, so there is no shape this data cannot express.
+> **CORRECTED.** The previous revision said this produces "no `outputSchema`
+> and no `structuredContent`." That is wrong — it produces both, and what they
+> contain is the actual problem.
+>
+> **[probe]** Registering two tools on `mcp 1.27.2`, one returning
+> `json.dumps({...})` under `-> str` and one returning a Pydantic model:
+>
+> ```
+> returns_json_string  outputSchema: {"properties":{"result":{"type":"string"}},...}
+>                      structuredContent: {"result": "{\"site_url\": \"…\", \"rows\": [{…}]}"}
+> returns_model        outputSchema: {"$defs":{"Row":{…}},"properties":{"site_url":…}}
+>                      structuredContent: {"site_url":"…","rows":[{"query":"a","clicks":1}]}
+> ```
+>
+> The SDK wraps a `-> str` return in `{"result": <string>}`. So the payload is
+> **JSON encoded as a string, nested inside JSON** — double-encoded, with every
+> quote escaped. The declared schema says "this tool returns a string," which is
+> true and useless: no client can validate the contents, and the escaping costs
+> tokens on every single response.
 
-This is the single highest-value change in the file. It turns 13 tools from
-"here is some text that happens to be JSON" into typed, validated results.
+Returning a Pydantic model, dataclass, or TypedDict fixes both halves at once —
+a real schema generated from the return annotation, and clean structured
+content. **[docs]** Under spec 2026-07-28 output schemas are full JSON Schema
+2020-12 and `structuredContent` may be any JSON value, so no shape is out of
+reach.
 
-### 2.2 Eight tools are inconsistent with the other thirteen
+This is the highest-value change in the file, and on the "most efficient code"
+axis it is also the cheapest win: it removes a whole layer of escaping from
+every response.
+
+### 2.2 Eight tools do not follow the pattern the other thirteen use
 
 **Wrapper: no. Upstream: yes. Impact: medium. Effort: low.**
 
-`add_site`, `submit_sitemap`, and `delete_sitemap` return assembled prose.
-`get_capabilities`, `delete_site`, `manage_sitemaps`, `get_creator_info`, and
-`reauthenticate` return plain strings. A model working across the tool set gets
-JSON from some calls and sentences from others, with nothing signalling which.
+**[code]** `add_site`, `delete_site`, `submit_sitemap`, `delete_sitemap`, and
+`reauthenticate` return assembled prose or plain sentences;
+`get_capabilities` returns a formatted text block; `get_creator_info` returns a
+string.
 
-Whatever 2.1 settles on, it should apply to all 21.
+> **CORRECTED.** The previous revision listed `manage_sitemaps` among the
+> inconsistent tools. **[code]** It is a router — it `return await`s
+> `list_sitemaps_enhanced`, `get_sitemap_details`, and the others, so its output
+> format is whatever they produce. It is not a separate inconsistency.
+
+**[docs]** Upstream's own `CLAUDE.md` already states the intended rule:
+"Return `json.dumps(result)` not formatted text strings (LLMs work better with
+structured data)." These eight predate it. Whatever 2.1 settles on should apply
+to all 21.
 
 ### 2.3 Errors are returned as successful results
 
 **Wrapper: no. Upstream: yes. Impact: high. Effort: medium.**
 
-40 `return f"Error..."` sites across the file, and 32 `except Exception`
-handlers against 8 `raise` statements. Every failure comes back as a normal
-successful tool result whose text begins with "Error". Nothing sets `isError`.
+**[code]** 40 `return f"Error…"` sites; 32 `except Exception` handlers against
+8 `raise` statements. Every failure arrives as a normal successful result whose
+text begins with "Error". Nothing sets `isError`.
 
-The consequences are concrete: a client cannot distinguish failure from data
-without string-matching, retry logic cannot trigger, errors are invisible to
-tracing, and a query that legitimately returns the word "Error" is
-indistinguishable from a failure. Raising a tool error — or returning a result
-with `is_error` set — costs nothing and makes failure machine-readable.
+Consequences: a client cannot distinguish failure from data without
+string-matching; retry logic cannot trigger; failures are invisible to tracing;
+and a genuine query containing the word "Error" is indistinguishable from a
+fault.
 
-Note also three bare `except:` clauses (lines 760, 1506, 1517), which swallow
-`KeyboardInterrupt` and `SystemExit` along with everything else.
+**[docs]** Upstream's `CLAUDE.md` documents this as the house pattern —
+"Handle `HttpError` and return a plain string error message on failure" — so
+changing it is a convention change, not a bug fix, and should be raised as such.
+
+**[code]** Also three bare `except:` clauses (lines 760, 1506, 1517), which
+swallow `KeyboardInterrupt` and `SystemExit`.
 
 ### 2.4 No tool annotations
 
 **Wrapper: no. Upstream: yes. Impact: medium. Effort: trivial.**
 
-Every tool is registered as a bare `@mcp.tool()`. The installed SDK's `tool()`
-already accepts `name`, `title`, `description`, `annotations`, `icons`, `meta`,
-and `structured_output` — all unused.
+**[code]** Every tool registers as a bare `@mcp.tool()`.
+**[sdk]** `FastMCP.tool` in 1.27.2 already accepts
+`name, title, description, annotations, icons, meta, structured_output`, and
+**[sdk]** `mcp.types.ToolAnnotations` exposes `title`, `readOnlyHint`,
+`destructiveHint`, `idempotentHint`, `openWorldHint`. All unused.
 
-`readOnlyHint` on the 18 read-only tools and `destructiveHint` on
-`delete_site`, `delete_sitemap`, and `add_site` would let hosts apply their own
-confirmation UX instead of relying solely on this plugin's
-`GSC_ALLOW_DESTRUCTIVE` environment flag. `idempotentHint` on the analytics
-tools would let clients cache and retry safely.
+**[code]** Classifying all 21 by whether they mutate anything: **15 are
+read-only**, 4 write (`add_site`, `delete_site`, `submit_sitemap`,
+`delete_sitemap`), 1 writes auth state (`reauthenticate`), and 1 is a router
+(`manage_sitemaps`). **[code]** Exactly 3 are gated by `GSC_ALLOW_DESTRUCTIVE`
+— `add_site` (line 355), `delete_site` (line 416), `delete_sitemap` (line 1535).
 
-### 2.5 Twenty-one tools is a large surface for what the API offers
+So: `readOnlyHint` on the 15, `destructiveHint` on the 3 gated ones, and
+neither on `submit_sitemap` — it writes but is not destructive, which is
+precisely the distinction the annotations exist to express and which a single
+environment flag cannot. `idempotentHint` on the analytics tools lets clients
+cache and retry safely. Hosts could then apply their own confirmation UX instead
+of depending solely on this plugin's flag.
 
-**Wrapper: partially — we choose what to document and steer toward.
-Upstream: yes. Impact: medium. Effort: medium.**
+### 2.5 Twenty-one tools, several of them the same tool twice
 
-Several tools overlap:
+**Wrapper: partially — our skills steer selection. Upstream: yes.
+Impact: medium. Effort: medium.**
 
-- `get_sitemaps`, `list_sitemaps_enhanced`, `get_sitemap_details`,
-  `submit_sitemap`, `delete_sitemap`, and `manage_sitemaps` — six tools over
-  four operations, one of which (`manage_sitemaps`) is a router over the others.
-- `get_search_analytics` and `get_advanced_search_analytics` differ by
-  capability, not by purpose. The "advanced" one is 165 lines, the largest tool
-  in the file.
-- `inspect_url_enhanced`, `batch_url_inspection`, and `check_indexing_issues`
-  are one URL, several URLs, and several URLs filtered to problems.
+**[code]** Six sitemap tools over four operations (`get_sitemaps`,
+`list_sitemaps_enhanced`, `get_sitemap_details`, `submit_sitemap`,
+`delete_sitemap`, `manage_sitemaps`, the last a router over the others). Three
+URL-inspection tools that differ only in cardinality and filtering. Two search
+analytics tools that differ by capability, not purpose — the "advanced" one at
+165 lines is the largest in the file.
 
-Every tool costs context in the model's tool list and adds a selection decision.
-The `_enhanced` and `_advanced` suffixes are archaeology — they exist because
-the simple version shipped first. Consolidating to roughly a dozen tools with
-richer parameters would read better and choose better, though it is a breaking
-change for anyone with prompts naming the old tools.
+The split exists for an avoidable reason. **[code]** `get_search_analytics`
+clamps `rowLimit` to 500 (line 493). **[docs]** The API's own valid range is
+**1–25,000 with a default of 1,000**. The 500 cap is self-imposed, and
+`get_advanced_search_analytics` exists partly to escape it.
 
-Until upstream does anything here, this repo mitigates it: the skills tell
-Claude which tool to reach for, which is most of the practical benefit.
+Consolidating to roughly a dozen richer tools would cut the tool-list context
+every request carries and remove a class of wrong-tool selection. It is a
+breaking change for anyone whose prompts name the old tools.
 
-### 2.6 No caching anywhere
+### 2.6 No caching, and Google explicitly asks for it
 
 **Wrapper: partially. Upstream: yes. Impact: medium. Effort: low.**
 
-`list_properties` is the first call in nearly every workflow and its answer
-changes maybe twice a year. It is re-fetched every time. The discovery document
-is fetched with `cache_discovery=False` (lines 152, 224) — correct for avoiding
-the file_cache warning, wasteful as a permanent setting.
+**[code]** No `lru_cache`, no TTL, no memoisation anywhere;
+`grep -in "cache\|lru_cache" gsc_server.py` returns only comments and the
+`cache_discovery=False` argument. `list_properties` opens nearly every workflow,
+changes perhaps twice a year, and is re-fetched every time.
 
-Spec 2026-07-28 adds `ttlMs` and `cacheScope` on list and resource-read results
-precisely for this, so clients can be told how long an answer stays fresh.
+**[docs]** Under Search Analytics load quota, Google's own guidance is to
+"avoid requerying the same data (for example, querying all data for last month
+over and over)." The load quota is the one most likely to bite a heavy user, and
+caching is the documented mitigation.
+
+**[docs]** Spec 2026-07-28 adds `ttlMs` and `cacheScope` to list results, so a
+server can tell clients how long an answer stays fresh.
+
+> **CORRECTED.** The previous revision called `cache_discovery=False`
+> (lines 152, 224) "wasteful as a permanent setting," implying a per-call HTTP
+> fetch of the discovery document.
+>
+> **[probe]** It costs nothing. With `socket.socket` patched to raise,
+> `build("searchconsole", "v1", credentials=…, cache_discovery=False)` still
+> succeeds in 0.001 s — `google-api-python-client` uses a bundled static
+> discovery document and makes no network call. The setting only suppresses a
+> file-cache warning, and `get_gsc_service()` is cheap. **The 22 `.execute()`
+> calls are the only blocking network I/O in the file.**
 
 ---
 
-## Tier 3 — Platform features that did not exist when this was written
+## Tier 3 — Platform features that postdate this design
 
 ### 3.1 Tasks extension for long-running work
 
 **Wrapper: no. Upstream: yes. Impact: high for large sites. Effort: high.**
 
-Indexing audits are the natural shape for this. Today the tools cap at 10 URLs
-per call because a synchronous call cannot credibly run for minutes; a real
-audit of a 5,000-page site is therefore 500 calls that the model has to
-orchestrate.
+**[docs]** A server can answer `tools/call` with a task handle and let the
+client drive `tasks/get`, `tasks/update`, and `tasks/cancel`. Task creation is
+server-directed; `tasks/list` was removed because it cannot be scoped safely
+without sessions.
 
-Under the Tasks extension a server can answer `tools/call` with a task handle
-and let the client drive `tasks/get`, `tasks/update`, and `tasks/cancel`. "Audit
-every URL in this sitemap" becomes one call that reports progress, respects the
-600/minute quota internally, and can be cancelled. This is the feature that
-would change what the server is capable of rather than how tidy it is.
+Indexing audits are the natural fit. Today, a 5,000-page audit is 500 separate
+calls the model has to orchestrate, because a synchronous call cannot credibly
+run for minutes. As a task it becomes one call that reports progress, paces
+itself against 600 QPM internally, and can be cancelled.
 
-Note that Tasks was redesigned when it moved from experimental core feature to
-extension — anyone who built against the `2025-11-25` API has to migrate.
+**[docs]** Tasks was redesigned when it graduated from experimental core feature
+to extension — anything built against the `2025-11-25` API needs migrating.
 
 ### 3.2 Elicitation instead of an environment flag
 
 **Wrapper: no. Upstream: yes. Impact: medium. Effort: medium.**
 
-`GSC_ALLOW_DESTRUCTIVE` is a blunt instrument: off and the tool is unusable, on
-and an agent can delete a property irreversibly with no confirmation. It exists
-because there was no in-protocol way to ask a human.
+`GSC_ALLOW_DESTRUCTIVE` is binary and set long before the dangerous moment: off
+and the tool is unusable, on and an agent can delete a property irreversibly
+with no confirmation. It exists because there was no in-protocol way to ask.
 
-There is now. Under 2026-07-28 the server returns an `InputRequiredResult`
-carrying what it needs plus an opaque `request_state`; the client collects the
-answer and re-issues the call. "Delete the property `sc-domain:example.com`?
-This cannot be undone" becomes a real prompt at the moment of the action,
-scoped to the specific target.
+**[docs]** There is now. The server returns an `InputRequiredResult` carrying
+what it still needs plus an opaque `requestState`; the client collects the
+answer and re-issues the call. "Delete `sc-domain:example.com`? This cannot be
+undone" becomes a prompt at the moment of the action, naming the specific
+target.
 
-Keep the env flag as a belt-and-braces default for hosts that do not implement
-the extension. But a confirmation attached to the operation is strictly better
-than a flag set weeks earlier for a different reason.
+Keep the flag as a default for hosts that do not implement the extension. A
+confirmation attached to the operation is strictly better than a flag set weeks
+earlier for a different reason.
 
 ### 3.3 MCP Apps for reports
 
 **Wrapper: no. Upstream: unlikely to be accepted. Impact: speculative.
 Effort: high.**
 
-MCP Apps lets a server ship an interactive HTML interface that the host renders
-in a sandboxed iframe. A keyword report with sortable columns and a
-position-over-time chart is a better artifact than a Markdown table.
+**[docs]** Servers can ship interactive HTML that hosts render in a sandboxed
+iframe, with UI-initiated actions going through the same consent path as a
+direct tool call.
 
-Listed for completeness, not recommended. It is the most speculative item here,
-it is a poor fit for an upstream project whose scope is data access, and this
-repo already has a better answer for visual output: build the report as an
-artifact from the data the tools return.
+Listed for completeness, not recommended. It is a poor fit for an upstream
+project scoped to data access, and this repo already has a better answer for
+visual output: build the report as an artifact from what the tools return.
 
 ### 3.4 Streamable HTTP instead of SSE
 
-**Wrapper: no. Upstream: yes. Impact: low for us, high for remote deployments.
-Effort: medium.**
+**Wrapper: no. Upstream: yes. Impact: low for us. Effort: trivial.**
 
-`main()` (line ~1672) supports `stdio` and `sse`. SSE was deprecated in spec
-`2025-03-26` in favour of Streamable HTTP, and the code already carries scar
-tissue from the gap — it disables DNS-rebinding protection outright
-(line 1693) to make the remote path work at all.
+**[code]** `main()` accepts only `stdio` and `sse` (line ~1672), and disables
+DNS-rebinding protection outright (line 1693) to make the remote path work.
 
-We run stdio, so this costs us nothing today. It matters if a hosted deployment
-is ever wanted, and disabling a security control to work around a deprecated
-transport is the wrong end state either way.
+> **CORRECTED.** The previous revision implied this needed an SDK upgrade and
+> rated the effort medium. **[sdk]** `FastMCP.run` in the pinned 1.27.2 already
+> accepts `transport: Literal["stdio", "sse", "streamable-http"]`. Supporting
+> the modern transport is adding one branch to upstream's `main()` — the SDK
+> support is already installed and paid for.
+
+**[docs]** SSE was deprecated in spec `2025-03-26` in favour of Streamable HTTP.
+We run stdio, so this costs us nothing today; it matters for any hosted
+deployment, and disabling a security control to prop up a deprecated transport
+is the wrong end state regardless.
 
 ### 3.5 SDK v2 migration
 
 **Wrapper: the pin is ours. Upstream: the port is theirs.
 Impact: medium. Effort: medium.**
 
-v2 is GA and v1 is now the previous line. The port is mechanical — `FastMCP` →
-`MCPServer`, module path, snake_case attributes — and it brings 1.1 for free
-(sync tools move to a worker thread), plus OpenTelemetry spans by default, plus
-the ability to serve both protocol revisions from one deployment.
+**[docs]** The port is mechanical — `FastMCP` → `MCPServer`, module path,
+snake_case attributes — and it brings 1.1 for free, adds OpenTelemetry spans by
+default, and serves both protocol revisions from one deployment so older hosts
+keep working.
 
-Our `mcp[cli]==1.27.2` pin is exact, so v2's release cannot surprise us. That is
-the pin doing its job, and it is also the reason there is no urgency: this can
-wait until upstream moves.
+Our exact pin means there is no urgency. This can wait for upstream.
 
 ---
 
@@ -295,53 +436,65 @@ wait until upstream moves.
 
 | Item | Detail |
 | --- | --- |
-| **Single-module layout** | 1,705 lines in one file, with six tools over 78 lines each and the largest at 165. A package (`auth.py`, `analytics.py`, `indexing.py`, `sitemaps.py`) would make the file navigable and testable. **Upstream.** |
-| **Tests are not vendored** | Upstream ships a 780-line `test_gsc_server.py`. We copied only `gsc_server.py`, so our CI proves the server *starts* but never that a tool *works*. Vendoring the test file costs nothing and closes a real gap. **Wrapper — do this.** |
-| **Bare `except:`** | Lines 760, 1506, 1517 swallow `KeyboardInterrupt` and `SystemExit`. **Upstream.** |
-| **DNS-rebinding protection disabled** | Line 1693, unconditionally on the SSE path. Should be an explicit opt-in with a documented origin allowlist. **Upstream.** |
-| **No structured logging** | Everything goes to stderr as text. SDK v2 emits OpenTelemetry spans by default; MCP-level logging is deprecated in favour of exactly that. **Upstream.** |
+| **Single-module layout** | **[code]** 1,705 lines in one file; six tools over 78 lines, the largest 165. A package (`auth`, `analytics`, `indexing`, `sitemaps`) would make it navigable and testable. **Upstream.** |
+| **Tests are not vendored** | **[code]** Upstream ships a 780-line `test_gsc_server.py`, mocked so it needs no credentials. We copied only `gsc_server.py`, so our CI proves the server *starts* and never that a tool *works*. **Wrapper — the one item here we can just do.** |
+| **Bare `except:`** | **[code]** Lines 760, 1506, 1517. **Upstream.** |
+| **DNS-rebinding protection disabled** | **[code]** Line 1693, unconditional on the SSE path. Should be opt-in with a documented origin allowlist. **Upstream.** |
+| **No structured logging** | Everything is stderr text. **[docs]** MCP-level logging is deprecated in favour of OpenTelemetry, which v2 emits by default. **Upstream.** |
 
 ---
 
 ## What to do, in order
 
-**Now, in this repo — no fork, no upstream dependency:**
+**Here, needing nobody's permission:**
 
-1. Vendor `test_gsc_server.py` and run it in CI. Our smoke test proves the
-   server starts; nothing currently proves a tool returns the right thing.
-2. Keep the skills steering tool selection. That is already mitigating 2.5.
+1. Vendor `test_gsc_server.py` and run it in CI.
+2. Keep the skills steering tool selection — that is already mitigating 2.5.
 
 **As upstream PRs, highest value first:**
 
-3. **Drop `async` / wrap in `asyncio.to_thread`** (1.1). Smallest diff, largest
-   correctness win, uncontroversial.
-4. **Typed returns with output schemas** (2.1 + 2.2). The change that most
-   improves what the model receives.
-5. **Proper error semantics** (2.3). Cheap, and it unblocks retry and tracing.
+3. **Thread-offload the 22 `.execute()` calls** (1.1). Mechanical, and the
+   correctness win is real.
+4. **Typed returns with output schemas** (2.1 + 2.2). Removes double-encoding
+   from every response and gives clients something to validate.
+5. **Surface `metadata.first_incomplete_date`** (1.5). Small, and it replaces a
+   rule of thumb with a fact the API already returns.
 6. **Tool annotations** (2.4). An afternoon.
-7. **Bounded concurrency and backoff** (1.2 + 1.3). Removes the artificial
+7. **Proper error semantics** (2.3). Raise as a convention discussion first —
+   it contradicts upstream's documented pattern.
+8. **Bounded concurrency and backoff** (1.2 + 1.3). Removes the artificial
    10-URL cap.
-8. **Tasks extension** (3.1). The one that changes what the server can do.
+9. **Tasks extension** (3.1). The one that changes what the server can do.
 
 **Do not:**
 
-- Fork to get items 3–8. Every one of them is a clean upstream contribution, and
-  the maintainer is active — the most recent commit is a dependency-pinning fix
-  for exactly the kind of breakage this repo cares about.
-- Unpin `mcp` to pick up v2 early. The pin is why v2's GA release was a
-  non-event for us.
-- Chase MCP Apps (3.3). Artifacts already cover visual reporting, better.
+- Fork to obtain items 3–9. Every one is generic; none is Kugamon-specific.
+- Unpin `mcp`. **[probe]** An unpinned `mcp[cli]` resolves to 2.2.0 today.
+- Chase MCP Apps (3.3). Artifacts cover visual reporting better.
 
-## If upstream does not want these
+## If upstream declines
 
-Then the question becomes whether a fork is worth 1,705 lines of permanent
-maintenance. The honest answer today is no: the server works, and every item
-above is a quality improvement rather than a defect. Revisit if 1.1 or 2.3 is
-declined, since those two are the ones that will eventually bite a real user.
+The question becomes whether a fork is worth permanent ownership of 1,705 lines.
+Today the honest answer is no: the server works, and everything above is a
+quality improvement rather than a defect. Revisit if 1.1 or 2.3 is declined —
+those two are the ones that will eventually bite a real user.
 
 ## Sources
 
-- [The 2026-07-28 MCP Specification Release Candidate](https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/)
-- [MCP Python SDK v2 beta: what is new and how to try it](https://pydantic.dev/articles/mcp-python-sdk-v2-beta)
+**Protocol and SDK**
+
+- [The 2026-07-28 MCP Specification Release Candidate](https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/) — stateless core, Tasks, MCP Apps, JSON Schema 2020-12, deprecations
 - [Transports — MCP specification 2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports)
+- [MCP Python SDK v2: what is new](https://pydantic.dev/articles/mcp-python-sdk-v2-beta) — `MCPServer` rename, worker-thread dispatch, OpenTelemetry
 - [Structured Output — MCP Python SDK](https://py.sdk.modelcontextprotocol.io/servers/structured-output/)
+- [modelcontextprotocol/python-sdk releases](https://github.com/modelcontextprotocol/python-sdk/releases)
+
+**Google Search Console**
+
+- [Search Analytics: query — API reference](https://developers.google.com/webmaster-tools/v1/searchanalytics/query) — `startDate`/`endDate` in PT, `rowLimit` 1–25,000, `metadata.first_incomplete_date`
+- [Usage Limits — Search Console API](https://developers.google.com/webmaster-tools/limits) — URL inspection 2,000 QPD / 600 QPM per site; Search Analytics 1,200 QPM; load quota and "avoid requerying the same data"
+- [Performance report: About the data](https://support.google.com/webmasters/answer/17011364) — preliminary data, property vs page aggregation
+
+**Upstream project**
+
+- [AminForou/mcp-gsc](https://github.com/AminForou/mcp-gsc) — the vendored server; `CLAUDE.md` documents the `json.dumps` and string-error conventions
