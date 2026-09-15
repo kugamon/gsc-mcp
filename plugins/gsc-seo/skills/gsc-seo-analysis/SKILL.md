@@ -1,7 +1,7 @@
 ---
 name: gsc-seo-analysis
 plugin: gsc-seo
-version: 1.2.0
+version: 1.3.0
 description: >
   Analyze Google Search Console data and turn it into SEO decisions. Use when the
   user asks to "analyze SEO performance", "check search console data", "review
@@ -49,7 +49,7 @@ recommendations someone can act on.
 | --- | --- | --- |
 | `get_performance_overview` | How is the site doing overall? | Summary + daily trend. Start here. |
 | `get_search_analytics` | What are the top queries / pages / countries / devices? | `dimensions`, `days`, `row_limit` (max 500). |
-| `get_advanced_search_analytics` | Same, with **filters** and pagination | Up to 25,000 rows. Search types: WEB, IMAGE, VIDEO, NEWS, DISCOVER. **`sort_by` is accepted and silently ignored** — see Tool limitations. |
+| `get_advanced_search_analytics` | Same, with **filters**, pagination and sorting | Up to 25,000 rows. Search types: WEB, IMAGE, VIDEO, NEWS, DISCOVER. **`sort_by` reorders the fetched page only** — it cannot reach rows Google didn't return. See Tool limitations. |
 | `compare_search_periods` | What changed between two date ranges? | The drop/gain diagnosis tool. |
 | `get_search_by_page_query` | Which queries drive traffic to *this* page? | The page-level workhorse. |
 
@@ -139,36 +139,39 @@ what the GSC web dashboard shows. `final` returns only confirmed data, lagging
 These are not theoretical. Each one produced a wrong finding in real use before
 it was written down.
 
-### `sort_by` does nothing. Never trust it.
+### `sort_by` sorts the page you fetched, not the dataset
 
-`get_advanced_search_analytics` accepts `sort_by` and `sort_direction`, and
-**silently ignores them.** The server sets an `orderBy` field on the request;
-[Google's Search Analytics API](https://developers.google.com/webmaster-tools/v1/searchanalytics/query)
-has no such field, so Google discards it. Results always come back **sorted by
-clicks, descending**, whatever you asked for.
+**Server version matters here.** In **0.4.0 and later** `get_advanced_search_analytics`
+applies `sort_by` client-side, after fetching. In **0.3.3 and earlier** it set an
+`orderBy` field that [Google's Search Analytics API](https://developers.google.com/webmaster-tools/v1/searchanalytics/query)
+does not have, so the argument was silently discarded and results came back
+clicks-descending whatever you asked for. Check
+`plugins/gsc-seo/server/UPSTREAM.md` for the vendored version if the ordering
+ever looks wrong.
 
-Verified two ways: the documented request body has no `orderBy` member, and
-requesting `sort_by=position, ascending` returns positions in the order
-9.4, 18.6, 12.4, 11.0 — unchanged.
+Even on 0.4.0, understand what the sort can and cannot do. **Google itself only
+ever returns rows sorted by clicks descending.** Client-side sorting reorders
+the rows you received; it does not change *which* rows you received.
 
-This is worse than an error, because the tool reports the sort it did not
-perform. Do not present results as "top by impressions" when you asked for that
-sort; you will be describing a clicks-ranked list.
+So `sort_by=impressions` on a 200-row pull gives you the highest-impression
+queries **among the 200 with the most clicks**. A query with 500 impressions and
+zero clicks was never in that set, and no sort argument will bring it in.
 
-### The consequence: high-impression zero-click queries are invisible
+### The consequence: high-impression zero-click queries stay out of reach
 
-Because sorting is fixed to clicks, a `row_limit` of 100 or 200 returns every
-query that has clicks, then fills the remainder with **zero-click queries in
-arbitrary order** — in practice alphabetical. The most valuable queries in an
-SEO analysis are exactly the ones with many impressions and no clicks, and
-those land wherever the alphabet puts them.
+A `row_limit` of 100 or 200 returns every query that has clicks, then fills the
+remainder with **zero-click queries in arbitrary order** — in practice
+alphabetical. The most valuable queries in an SEO analysis are exactly the ones
+with many impressions and no clicks, and those land wherever the alphabet puts
+them.
 
 A real example: a 200-row pull surfaced a cluster of `apttus*` queries and
 missed `conga cpq alternatives` — 500 impressions, position 12.5, zero clicks,
 the single largest opportunity on the site. It was invisible because it starts
-with C.
+with C. Sorting that pull by impressions would not have found it either.
 
-**The workaround: filter instead of sort.** Filters *do* work.
+**The workaround: filter instead of sort.** Filters *do* work, and they change
+which rows come back rather than just their order.
 
 ```
 get_advanced_search_analytics
@@ -311,8 +314,10 @@ own brand. Do the thinking first; that skill only handles presentation.
 - `row_limit` — 20 for a quick look, 200 for analysis, up to 500 on
   `get_search_analytics`. Beyond that use `get_advanced_search_analytics`.
   Note the 500 cap is self-imposed by the server; the API's own limit is 25,000.
-- `sort_by` / `sort_direction` — accepted, ignored. Results are always
-  clicks-descending. Use filters instead.
+- `sort_by` / `sort_direction` — sorts the returned page client-side (0.4.0+;
+  silently ignored before that). Google always returns clicks-descending rows,
+  so this reorders what you got, never what you get. Use filters to change the
+  latter.
 - `dimensions` — `query`, `page`, `country`, `device`, `date`, `searchAppearance`.
   Combine with commas.
 - Country filters use ISO 3166-1 alpha-3: `usa`, `gbr`, `deu`.

@@ -1,7 +1,7 @@
 ---
 name: gsc-report
 plugin: gsc-seo
-version: 1.2.0
+version: 1.3.0
 description: >
   Render a Search Console analysis as a designed, print-ready HTML document
   styled in the site's own brand. Use when the user asks for the analysis "as a

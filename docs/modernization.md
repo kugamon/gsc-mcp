@@ -141,14 +141,19 @@ real per-site quota is **2,000 queries per day and 600 per minute** — the 10-U
 cap is about the serial design being unbearable at larger sizes, not about the
 quota.
 
-**This is already breaking real users.** Upstream issue
-[#31](https://github.com/AminForou/mcp-gsc/issues/31) reports that a 10-URL
-batch against an `sc-domain:` property takes 70–100 s and exceeds the MCP
-client's 60 s timeout, surfacing as `MCP error -32001: Request timed out`;
-splitting into two batches of 5 succeeds. Note that PR #52 does **not** fix
-this — moving the calls off the event loop does not make a sequential loop
-faster. It is the prerequisite: the calls have to be off the loop before they
-can be gathered concurrently.
+**Fixed upstream in 0.4.0 for `batch_url_inspection` only.** Issue
+[#31](https://github.com/AminForou/mcp-gsc/issues/31) reported 10-URL batches
+taking 70–100 s against `sc-domain:` properties and exceeding the MCP client's
+60 s timeout. The maintainer resolved it with `asyncio.Semaphore(10)` +
+`asyncio.to_thread` + `asyncio.gather`, giving each thread its own service
+instance — the right detail, since `googleapiclient` service objects are not
+thread-safe.
+
+**[code]** `check_indexing_issues` was not changed and is still a sequential
+loop with the same 10-URL cap, so it plausibly has the same timeout. Flagged
+upstream in #55 as an observation rather than a reproduced bug. The 10-URL cap
+also remains on both, despite the 600 QPM quota now being the only real
+constraint.
 
 Bounded concurrency fixes both: a semaphore of 5–10 over the thread offload from
 1.1, sized against 600 QPM rather than a round number.
@@ -205,10 +210,26 @@ days are provisional" — a rule of thumb standing in for a value the API return
 exactly. Surfacing it would replace a guess with a fact, and would let a report
 mark precisely where the provisional region starts.
 
-### 1.6 `sort_by` is accepted and silently ignored
+### 1.6 ~~`sort_by` is accepted and silently ignored~~ — FIXED UPSTREAM in 0.4.0
 
-**Wrapper: documented. Upstream: yes. Impact: high. Effort: trivial.**
-*(Found in real use, 2026-09-14.)*
+**Reported as AminForou/mcp-gsc#54 on 2026-09-14, fixed 2026-09-15.** The
+maintainer removed the dead `orderBy` and sorts client-side after fetching.
+
+**The trap survives in a subtler form, and the skill still covers it.** Google
+only ever returns rows sorted by clicks descending, so a client-side sort
+reorders the page you received without changing which rows you received. Asking
+for `sort_by=impressions` on a 200-row pull gives the highest-impression queries
+*among the 200 with the most clicks* — a zero-click query with 500 impressions
+was never in the set. Filters remain the only way to reach it. Upstream
+documents this honestly in a code comment: "Sorting applies within the returned
+page of rows."
+
+One instance of the same dead field remains in `get_search_by_page_query`;
+reported as #55.
+
+The original finding is preserved below.
+
+---
 
 **[code]** `get_advanced_search_analytics` builds
 `request["orderBy"] = [{"metric": ..., "direction": ...}]` (lines 1048–1058).
@@ -318,8 +339,13 @@ fault.
 "Handle `HttpError` and return a plain string error message on failure" — so
 changing it is a convention change, not a bug fix, and should be raised as such.
 
-**[code]** Also three bare `except:` clauses (lines 760, 1506, 1517), which
-swallow `KeyboardInterrupt` and `SystemExit`.
+**Partially resolved upstream in 0.4.0.** Raised as
+[#53](https://github.com/AminForou/mcp-gsc/issues/53); the maintainer narrowed
+the bare `except:` clauses to `except Exception:` and **declined the isError
+change**, keeping the documented string-error convention. That is his call on
+his project's conventions, and raising it as a discussion rather than a PR was
+the right way to find that out. The analysis above stands as a reason to prefer
+error semantics in anything we build ourselves.
 
 ### 2.4 No tool annotations
 
@@ -500,11 +526,13 @@ Our exact pin means there is no urgency. This can wait for upstream.
 
 **As upstream PRs, highest value first:**
 
-3. ~~**Thread-offload the 22 `.execute()` calls**~~ (1.1). **Submitted
-   2026-09-14 as AminForou/mcp-gsc#52.** Tools stay `async`, so it preserves
-   upstream's documented convention. Measured 1.27 s → 0.28 s for 5 concurrent
-   calls at 250 ms latency, with a regression test verified to fail on their
-   `main`.
+3. **Thread-offload the remaining 21 `.execute()` calls** (1.1). Open as
+   AminForou/mcp-gsc#52, **rebased onto 0.4.0 on 2026-09-15** — 0.4.0 rewrote
+   `batch_url_inspection`, which the original patch touched. Now 21 sites
+   rather than 22, with `_inspect_single_url` deliberately left synchronous
+   because it already runs in a worker thread. Measured 1.27 s → 0.28 s for 5
+   concurrent calls at 250 ms latency; regression test verified to fail on
+   revert.
 4. **Typed returns with output schemas** (2.1 + 2.2). Removes double-encoding
    from every response and gives clients something to validate.
 5. **Surface `metadata.first_incomplete_date`** (1.5). Small, and it replaces a

@@ -1,5 +1,63 @@
 # Changelog
 
+## v1.3.0 — 2026-09-15
+
+Upstream shipped 0.4.0 the day after we reported three issues. Two of them are
+fixed in it, one was declined with reasons, and the vendored server moves up.
+
+### Vendored server 0.3.3 → 0.4.0
+
+Upstream commit `f21d49c`. What it brings, all of it things this plugin reported
+or relied on:
+
+- **`sort_by` now works** (#54, ours) — the dead `orderBy` is gone and sorting
+  is applied client-side.
+- **`batch_url_inspection` runs concurrently** (#31) — `Semaphore(10)` +
+  `to_thread` + `gather`, with a separate service instance per thread, which is
+  the detail that matters since `googleapiclient` services are not thread-safe.
+  10-URL batches no longer time out on `sc-domain:` properties.
+- **Bare `except:` clauses narrowed** to `except Exception:` (part of #53,
+  ours).
+- Rich-result reporting fixes (#46, #48) and the `compare_search_periods` delta
+  direction (#42), neither of which we had found.
+
+Checked on this sync: 21 tools unchanged, no new `GSC_*` variables, dependency
+ranges unchanged so the pins hold, tests 43 → 51, all passing against our copy,
+launcher verified.
+
+### The `sort_by` guidance changed shape rather than going away
+
+The skill used to say "`sort_by` does nothing, never trust it." On 0.4.0 that is
+wrong — but the trap survives in a subtler form, and getting this right matters
+more than the original warning did.
+
+**Google only ever returns rows sorted by clicks descending.** Client-side
+sorting reorders the rows you received; it cannot change which rows you
+received. So `sort_by=impressions` on a 200-row pull gives the
+highest-impression queries *among the 200 with the most clicks* — a query with
+500 impressions and zero clicks was never in that set, and no sort argument
+brings it in.
+
+Filters still do change which rows come back, so the filtered-sweep technique is
+unchanged. The guidance is now version-qualified, and points at `UPSTREAM.md`
+when ordering looks wrong.
+
+### What upstream declined, and why that was worth asking
+
+The `isError` change (#53) was declined: *"Keeping the documented string-error
+convention for now."* That is the maintainer's call on his project's
+conventions, and raising it as a discussion rather than a PR is how we found out
+cheaply. The reasoning still stands as a rule for anything we build ourselves.
+
+### Still open upstream
+
+- **#52** — the event-loop fix, rebased onto 0.4.0. 0.4.0 took
+  `batch_url_inspection` off the loop; the other **21** `.execute()` sites still
+  block it.
+- **#55** — a leftover `orderBy` in `get_search_by_page_query`, the same dead
+  field removed elsewhere in 0.4.0, plus an observation that
+  `check_indexing_issues` is still the sequential loop that #31 fixed next door.
+
 ## v1.2.0 — 2026-09-14
 
 Three failure modes found by running the plugin against six months of real

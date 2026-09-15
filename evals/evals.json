@@ -1,6 +1,6 @@
 {
   "$comment": "Behavioral tests. Each prompt should cause the named skill or command to fire and the expectations to hold. Run them by hand in a fresh Claude session after any substantive edit to a SKILL.md — a skill that stops triggering is invisible until someone notices the answers got worse.",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "evals": [
     {
       "id": "analysis-triggers",
@@ -135,15 +135,15 @@
       ]
     },
     {
-      "id": "sort-by-not-trusted",
-      "$comment": "Regression: sort_by=impressions was used and its output presented as impression-ranked. It is silently ignored by Google.",
+      "id": "sort-by-page-not-dataset",
+      "$comment": "Regression: sort_by=impressions was used and its output presented as impression-ranked. Server 0.4.0 sorts client-side, but only within the clicks-ranked page Google returned — so the trap survived the upstream fix in a subtler form.",
       "prompt": "Pull me the top queries by impressions for the last six months.",
       "expect_skill": "gsc-seo-analysis",
       "expect": [
-        "does not rely on sort_by to produce an impression ranking",
-        "states that results come back clicks-sorted regardless of the sort argument",
+        "does not present a sorted page as the top queries by impressions across the property",
+        "explains that Google returns clicks-descending rows and sorting only reorders what was fetched",
         "uses filtered pulls to reach high-impression zero-click queries",
-        "never labels a clicks-sorted list as 'top by impressions'"
+        "does not claim sort_by is broken on a 0.4.0+ server, nor that it works on an older one"
       ]
     },
     {

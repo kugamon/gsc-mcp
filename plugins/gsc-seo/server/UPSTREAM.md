@@ -8,12 +8,22 @@ MIT licensed. The upstream license is preserved here as `LICENSE.upstream`.
 | --- | --- |
 | Upstream repo | https://github.com/AminForou/mcp-gsc |
 | Upstream package | `mcp-search-console` on PyPI |
-| Vendored version | 0.3.3 |
-| Vendored commit | `b3f2ab829ebc8f8294440821b4d476d75b5edadd` (2026-07-29) |
-| Commit subject | `fix: pin mcp[cli]<2.0.0 to unbreak fresh installs (#41)` |
-| `gsc_server.py` SHA-256 (first 16) | `3777d8d5f0dbab48` |
-| `test_gsc_server.py` SHA-256 (first 16) | `a25b89e4d8b78159` |
+| Vendored version | 0.4.0 |
+| Vendored commit | `f21d49c0e9536e1aeb4c3fb501282c5fa3490e1e` (2026-09-15) |
+| Commit subject | `feat: bug-fix release 0.4.0 (rich results, batch concurrency, comparison direction, sorting)` |
+| `gsc_server.py` SHA-256 (first 16) | `5b82759c23f972f1` |
+| `test_gsc_server.py` SHA-256 (first 16) | `5d84457864ef4612` |
 | Local modifications | **None.** Not one line, in either file. |
+
+### Re-sync history
+
+| Date | From → to | Why |
+| --- | --- | --- |
+| 2026-09-15 | 0.3.3 → 0.4.0 | Upstream fixed three things this plugin had reported or relied on: `sort_by` now sorts client-side (#54), `batch_url_inspection` runs concurrently so 10-URL batches stop timing out (#31), and bare `except:` clauses are narrowed (#53). Also fixes rich-result reporting (#46, #48) and the `compare_search_periods` delta direction (#42). |
+
+Checked on this sync: tool count unchanged at 21, no new `GSC_*` environment
+variables, dependency ranges unchanged so the pins below still hold, test count
+43 → 51.
 
 Two files are vendored: the server and its test suite. The tests are mocked with
 `unittest.mock` and need no Google credentials, so they run in CI on every push
