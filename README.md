@@ -18,11 +18,6 @@ exposes it), it cannot submit to Google via IndexNow (Google does not
 participate), and it cannot see more than 16 months of history. The skills say
 so rather than inventing a workaround.
 
-> **Private repo.** Adding a private repo as a marketplace requires your Claude
-> GitHub authorization to have access to it. See
-> [Install](#install) for the local-folder route, which needs no GitHub access
-> at all.
-
 ## Why this plugin
 
 Claude does not know, out of the box:
@@ -135,14 +130,10 @@ can be added under `plugins/` later and the install URL never changes.
 Customize → Marketplace → **+ Add marketplace** → enter `kugamon/gsc-mcp` →
 **Sync** → **Install** `gsc-seo` → quit Claude completely (Cmd+Q) and reopen.
 
-While this repo is private, your Claude GitHub authorization must have access
-to it. If sync fails with "not a marketplace", that is usually the cause.
-
 ### Option 2 — Local folder
 
 Clone the repo, then Customize → Marketplace → add a local folder and pick
 `plugins/gsc-seo/` — the directory containing `.claude-plugin/plugin.json`.
-Needs no GitHub authorization.
 
 ### Option 3 — settings.json
 
@@ -203,9 +194,9 @@ started, so "tools missing" is the only symptom a dead server produces.
 
 ## Troubleshooting
 
-**Marketplace sync says "not a marketplace" or "no manifest".** Either the
-branch has no `.claude-plugin/marketplace.json` at its root, or — while this
-repo is private — your Claude GitHub authorization cannot see it.
+**Marketplace sync says "not a marketplace" or "no manifest".** The branch you
+pointed at has no `.claude-plugin/marketplace.json` at its root — check you
+entered `kugamon/gsc-mcp` and not a fork or a feature branch.
 
 **Plugin installs but no GSC tools appear.** The server did not start. Skills
 and commands load independently of it, so the plugin looks fine. Check the MCP
