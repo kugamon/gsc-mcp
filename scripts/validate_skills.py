@@ -25,6 +25,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 PLUGIN = ROOT / "plugins" / "gsc-seo"
 
+# Directories the repo-wide walkers never descend into. `local/` holds untracked
+# working material — archived bundles and a full clone of the upstream project —
+# whose Markdown and relative links are not ours to validate.
+SKIP_DIRS = {".git", ".venv", "venv", "local", "__pycache__", "node_modules"}
+
+
+def skipped(path: Path) -> bool:
+    return any(part in SKIP_DIRS for part in path.parts)
+
 errors: list[str] = []
 warnings: list[str] = []
 
@@ -263,7 +272,7 @@ def check_server() -> None:
 def check_doc_links() -> None:
     """Every relative Markdown link must resolve to a real file."""
     for md in ROOT.rglob("*.md"):
-        if ".venv" in md.parts or ".git" in md.parts:
+        if skipped(md):
             continue
         text = md.read_text(encoding="utf-8")
         for target in re.findall(r"\]\((?!https?://|mailto:|#)([^)#]+)", text):
@@ -282,7 +291,7 @@ def check_no_secrets() -> None:
     ]
     self_path = Path(__file__).resolve()
     for path in ROOT.rglob("*"):
-        if not path.is_file() or ".git" in path.parts or path.resolve() == self_path:
+        if not path.is_file() or skipped(path) or path.resolve() == self_path:
             continue
         if path.suffix not in (".json", ".txt", ".md", ".pem", ".sh", ".py", ".yml", ".yaml"):
             continue

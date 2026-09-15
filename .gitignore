@@ -18,3 +18,7 @@ venv/
 # Local scratch
 /tmp/
 *.local.md
+
+# Untracked working material — archived bundles, upstream reference clone.
+# See local/README.md.
+local/
