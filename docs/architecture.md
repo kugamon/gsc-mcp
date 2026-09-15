@@ -38,6 +38,7 @@ loudly to stderr.
 | `plugins/gsc-seo/.claude-plugin/plugin.json` | Plugin manifest |
 | `plugins/gsc-seo/.mcp.json` | MCP server declaration. Every path uses `${CLAUDE_PLUGIN_ROOT}` |
 | `plugins/gsc-seo/server/gsc_server.py` | The MCP server. Vendored verbatim from upstream |
+| `plugins/gsc-seo/server/test_gsc_server.py` | Upstream's test suite, vendored verbatim. 43 mocked tests, no credentials needed, run by CI |
 | `plugins/gsc-seo/server/run-server.sh` | Launcher — finds a Python environment, execs the server |
 | `plugins/gsc-seo/server/requirements.txt` | Pinned dependencies |
 | `plugins/gsc-seo/server/UPSTREAM.md` | Provenance and the re-sync procedure |

@@ -437,7 +437,7 @@ Our exact pin means there is no urgency. This can wait for upstream.
 | Item | Detail |
 | --- | --- |
 | **Single-module layout** | **[code]** 1,705 lines in one file; six tools over 78 lines, the largest 165. A package (`auth`, `analytics`, `indexing`, `sitemaps`) would make it navigable and testable. **Upstream.** |
-| **Tests are not vendored** | **[code]** Upstream ships a 780-line `test_gsc_server.py`, mocked so it needs no credentials. We copied only `gsc_server.py`, so our CI proves the server *starts* and never that a tool *works*. **Wrapper — the one item here we can just do.** |
+| ~~**Tests are not vendored**~~ | **Done, 2026-09-14.** Upstream's 780-line `test_gsc_server.py` is now vendored beside the server, hash-pinned in `UPSTREAM.md`, and run by CI — 43 tests, mocked, no credentials. CI now proves a tool *works*, not just that the server starts. |
 | **Bare `except:`** | **[code]** Lines 760, 1506, 1517. **Upstream.** |
 | **DNS-rebinding protection disabled** | **[code]** Line 1693, unconditional on the SSE path. Should be opt-in with a documented origin allowlist. **Upstream.** |
 | **No structured logging** | Everything is stderr text. **[docs]** MCP-level logging is deprecated in favour of OpenTelemetry, which v2 emits by default. **Upstream.** |
@@ -448,8 +448,10 @@ Our exact pin means there is no urgency. This can wait for upstream.
 
 **Here, needing nobody's permission:**
 
-1. Vendor `test_gsc_server.py` and run it in CI.
+1. ~~Vendor `test_gsc_server.py` and run it in CI.~~ **Done 2026-09-14.**
 2. Keep the skills steering tool selection — that is already mitigating 2.5.
+3. Consider replacing the skills' "last 2–3 days are provisional" rule of thumb
+   with `metadata.first_incomplete_date` once 1.5 lands upstream.
 
 **As upstream PRs, highest value first:**
 

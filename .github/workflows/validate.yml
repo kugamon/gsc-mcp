@@ -46,6 +46,27 @@ jobs:
       - name: Byte-compile the vendored server
         run: python3 -m py_compile plugins/gsc-seo/server/gsc_server.py
 
+  tests:
+    name: Vendored server test suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      # Upstream's suite, vendored alongside the server and mocked with
+      # unittest.mock — no Google credentials required. This is what proves a
+      # tool returns the right thing; the smoke job only proves it starts.
+      - name: Run tests
+        working-directory: plugins/gsc-seo/server
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv run --no-project --python 3.11 \
+            --with-requirements requirements.txt \
+            --with pytest --with pytest-asyncio \
+            python -m pytest test_gsc_server.py -q
+
   smoke:
     name: Server starts and speaks MCP
     runs-on: ubuntu-latest

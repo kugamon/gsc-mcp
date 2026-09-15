@@ -226,7 +226,14 @@ def check_commands() -> None:
 # -------------------------------------------------------------------- server --
 def check_server() -> None:
     server_dir = PLUGIN / "server"
-    required = ["gsc_server.py", "run-server.sh", "requirements.txt", "UPSTREAM.md", "LICENSE.upstream"]
+    required = [
+        "gsc_server.py",
+        "test_gsc_server.py",
+        "run-server.sh",
+        "requirements.txt",
+        "UPSTREAM.md",
+        "LICENSE.upstream",
+    ]
     for name in required:
         if not (server_dir / name).exists():
             error(f"missing server/{name}")
@@ -243,20 +250,29 @@ def check_server() -> None:
                     "MCP protocol stream. Redirect to stderr."
                 )
 
-    server_py = server_dir / "gsc_server.py"
+    # Both vendored files are hash-pinned. UPSTREAM.md records each on its own
+    # labelled row, so match the filename and the digest together rather than
+    # grabbing the first 16-hex string in the document.
     upstream_md = server_dir / "UPSTREAM.md"
-    if server_py.exists() and upstream_md.exists():
-        digest = hashlib.sha256(server_py.read_bytes()).hexdigest()[:16]
-        recorded = re.search(r"`([0-9a-f]{16})`", upstream_md.read_text(encoding="utf-8"))
-        if not recorded:
-            warn("UPSTREAM.md records no SHA-256 prefix for gsc_server.py")
-        elif recorded.group(1) != digest:
-            error(
-                "gsc_server.py does not match the hash recorded in UPSTREAM.md "
-                f"(file is {digest}, UPSTREAM.md says {recorded.group(1)}). "
-                "Either the vendored copy was modified, or the re-sync did not "
-                "update UPSTREAM.md."
+    if upstream_md.exists():
+        manifest = upstream_md.read_text(encoding="utf-8")
+        for name in ("gsc_server.py", "test_gsc_server.py"):
+            vendored = server_dir / name
+            if not vendored.exists():
+                continue
+            digest = hashlib.sha256(vendored.read_bytes()).hexdigest()[:16]
+            recorded = re.search(
+                rf"`{re.escape(name)}`[^|]*\|\s*`([0-9a-f]{{16}})`", manifest
             )
+            if not recorded:
+                warn(f"UPSTREAM.md records no SHA-256 prefix for {name}")
+            elif recorded.group(1) != digest:
+                error(
+                    f"{name} does not match the hash recorded in UPSTREAM.md "
+                    f"(file is {digest}, UPSTREAM.md says {recorded.group(1)}). "
+                    "Either the vendored copy was modified, or the re-sync did "
+                    "not update UPSTREAM.md."
+                )
 
     requirements = server_dir / "requirements.txt"
     if requirements.exists():

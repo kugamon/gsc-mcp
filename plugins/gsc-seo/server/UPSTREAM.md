@@ -11,8 +11,15 @@ MIT licensed. The upstream license is preserved here as `LICENSE.upstream`.
 | Vendored version | 0.3.3 |
 | Vendored commit | `b3f2ab829ebc8f8294440821b4d476d75b5edadd` (2026-07-29) |
 | Commit subject | `fix: pin mcp[cli]<2.0.0 to unbreak fresh installs (#41)` |
-| SHA-256 (first 16) | `3777d8d5f0dbab48` |
-| Local modifications | **None.** Not one line. |
+| `gsc_server.py` SHA-256 (first 16) | `3777d8d5f0dbab48` |
+| `test_gsc_server.py` SHA-256 (first 16) | `a25b89e4d8b78159` |
+| Local modifications | **None.** Not one line, in either file. |
+
+Two files are vendored: the server and its test suite. The tests are mocked with
+`unittest.mock` and need no Google credentials, so they run in CI on every push
+— 43 tests covering auth, analytics, indexing, and sitemaps. Without them CI
+would prove only that the server *starts*, never that a tool returns the right
+thing.
 
 ## Why vendor instead of depending on the PyPI package
 
@@ -37,10 +44,14 @@ every future sync into a conflict resolution.
 git clone --depth 1 https://github.com/AminForou/mcp-gsc.git /tmp/mcp-gsc
 cd /tmp/mcp-gsc && git log -1 --format='%H %ad %s' --date=short   # record this
 
-cp /tmp/mcp-gsc/gsc_server.py  plugins/gsc-seo/server/gsc_server.py
-cp /tmp/mcp-gsc/LICENSE        plugins/gsc-seo/server/LICENSE.upstream
-shasum -a 256 plugins/gsc-seo/server/gsc_server.py                 # record this
+cp /tmp/mcp-gsc/gsc_server.py       plugins/gsc-seo/server/gsc_server.py
+cp /tmp/mcp-gsc/test_gsc_server.py  plugins/gsc-seo/server/test_gsc_server.py
+cp /tmp/mcp-gsc/LICENSE             plugins/gsc-seo/server/LICENSE.upstream
+shasum -a 256 plugins/gsc-seo/server/gsc_server.py \
+              plugins/gsc-seo/server/test_gsc_server.py    # record both
 ```
+
+A local clone for diffing lives at `local/upstream-reference/mcp-gsc`.
 
 Then, in order:
 
