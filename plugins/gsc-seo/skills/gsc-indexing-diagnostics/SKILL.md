@@ -1,7 +1,7 @@
 ---
 name: gsc-indexing-diagnostics
 plugin: gsc-seo
-version: 1.1.0
+version: 1.2.0
 description: >
   Diagnose indexing, crawling, and sitemap problems in Google Search Console.
   Use when the user says a page "isn't showing up in Google", "isn't indexed",

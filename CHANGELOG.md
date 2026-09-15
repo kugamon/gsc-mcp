@@ -1,5 +1,67 @@
 # Changelog
 
+## v1.2.0 — 2026-09-14
+
+Three failure modes found by running the plugin against six months of real
+data. Each one had already produced a wrong finding before it was written down.
+
+### `sort_by` is silently ignored — the skill now says so
+
+`get_advanced_search_analytics` accepts `sort_by` and `sort_direction` and
+discards them. The server sets an `orderBy` field on the request; Google's
+Search Analytics API has no such field, so it is dropped. Results always return
+**clicks-descending**, whatever was asked for.
+
+Verified twice: the [documented request body](https://developers.google.com/webmaster-tools/v1/searchanalytics/query)
+has no `orderBy` member, and `sort_by=position` ascending returns positions in
+the order 9.4, 18.6, 12.4, 11.0 — unchanged.
+
+This is worse than an error, because the tool reports a sort it did not perform.
+Reported upstream.
+
+**The consequence, and the workaround.** With sorting fixed to clicks, a
+200-row pull returns every query that has clicks and then fills the rest with
+zero-click queries in arbitrary — in practice alphabetical — order. The most
+valuable queries in an SEO analysis are exactly the high-impression zero-click
+ones, so they land wherever the alphabet puts them. In real use this hid
+`conga cpq alternatives` (500 impressions, position 12.5, the site's single
+largest opportunity) behind a cluster of `apttus*` queries.
+
+Filters do work. The skill now prescribes one filtered pull per commercially
+meaningful term instead, and requires saying plainly that a filtered sweep is
+targeted rather than exhaustive.
+
+### The sitelink trap
+
+A page ranking top-three with near-zero CTR reads as the most dramatic finding
+on a site. Usually it is Google working correctly: sitelinks under a brand
+result are each credited an impression at position ~1, while the click goes to
+the main result.
+
+The skill now requires running `get_search_by_page_query` before calling such a
+page an anomaly, and documents the signature — one brand query supplying nearly
+all impressions at position ~1. It also notes that sitelink impressions depress
+site-wide CTR averages, so an average including them understates performance.
+
+This one cost a real report its number-one recommendation, which was to
+investigate two pages that turned out to be fine.
+
+### Cannibalization and AI-agent queries
+
+- **Cannibalization** now has a worked example and the paired-dimension recipe
+  (`dimensions=query,page`, filtered). Query-only and page-only views both hide
+  it; you have to pair them. Also notes the tell where the page holding the best
+  position has the least exposure.
+- **AI-agent queries** — paragraph-long persona prompts appearing as literal
+  searches — are now a documented class. Report the cluster as a signal about
+  comparison content; don't target the wording, which never repeats, and exclude
+  them from CTR averages.
+
+### Also
+
+Six new evals covering each regression, and the tool table and argument
+reference now carry the `sort_by` warning at the point of use.
+
 ## v1.1.0 — 2026-09-14
 
 Designed, print-ready reports styled in the site's own brand.

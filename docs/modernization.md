@@ -205,6 +205,42 @@ days are provisional" — a rule of thumb standing in for a value the API return
 exactly. Surfacing it would replace a guess with a fact, and would let a report
 mark precisely where the provisional region starts.
 
+### 1.6 `sort_by` is accepted and silently ignored
+
+**Wrapper: documented. Upstream: yes. Impact: high. Effort: trivial.**
+*(Found in real use, 2026-09-14.)*
+
+**[code]** `get_advanced_search_analytics` builds
+`request["orderBy"] = [{"metric": ..., "direction": ...}]` (lines 1048–1058).
+
+**[docs]** The Search Analytics API request body has no `orderBy` member. Its
+documented fields are `startDate`, `endDate`, `dimensions`, `type`,
+`dimensionFilterGroups`, `aggregationType`, `rowLimit`, `startRow` and
+`dataState`, and the reference states results are sorted by click count
+descending. Google discards the unknown field.
+
+**[probe]** Requesting `sort_by=position, sort_direction=ascending` returns
+positions in the order 9.4, 18.6, 12.4, 11.0 — identical to the unsorted call.
+
+The tool therefore reports a sort it did not perform, which is worse than an
+error: a caller asking for "top by impressions" receives a clicks-ranked list
+and has no signal that anything went wrong.
+
+The consequence compounds. With ordering fixed to clicks, a large `row_limit`
+returns every query that has clicks and fills the remainder with **zero-click
+queries in arbitrary order**. High-impression zero-click queries — precisely
+what an SEO analysis is looking for — are effectively unreachable. In real use
+this concealed a 500-impression, position-12.5 query that was the largest single
+opportunity on the site.
+
+**Fix, upstream:** either drop the parameter and document that the API sorts by
+clicks, or keep it and sort client-side after fetching — which is only honest if
+the tool also fetches enough rows for a client-side sort to mean anything.
+Silently accepting it is the one option that should not remain.
+
+**Fix, here:** done. The `gsc-seo-analysis` skill documents the behaviour at the
+point of use and prescribes filtered pulls, which do work, as the workaround.
+
 ---
 
 ## Tier 2 — What the model actually receives

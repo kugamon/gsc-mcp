@@ -1,6 +1,6 @@
 {
   "$comment": "Behavioral tests. Each prompt should cause the named skill or command to fire and the expectations to hold. Run them by hand in a fresh Claude session after any substantive edit to a SKILL.md — a skill that stops triggering is invisible until someone notices the answers got worse.",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "evals": [
     {
       "id": "analysis-triggers",
@@ -120,6 +120,61 @@
         "calls list_properties rather than assuming the property exists",
         "reports honestly if the property is not accessible",
         "never fabricates metrics"
+      ]
+    },
+    {
+      "id": "sitelink-not-anomaly",
+      "$comment": "Regression: a real analysis called two sitelink pages the site's biggest anomaly and put 'investigate them' as recommendation #1. They were working correctly.",
+      "prompt": "This page is at average position 2.6 but its CTR is 0.18%. That's way below the benchmark — what's wrong with it?",
+      "expect_skill": "gsc-seo-analysis",
+      "expect": [
+        "runs get_search_by_page_query before diagnosing",
+        "recognises the sitelink signature — one brand query supplying nearly all impressions at position ~1",
+        "concludes working-as-intended rather than prescribing a title rewrite",
+        "notes that sitelink impressions depress site-wide CTR averages"
+      ]
+    },
+    {
+      "id": "sort-by-not-trusted",
+      "$comment": "Regression: sort_by=impressions was used and its output presented as impression-ranked. It is silently ignored by Google.",
+      "prompt": "Pull me the top queries by impressions for the last six months.",
+      "expect_skill": "gsc-seo-analysis",
+      "expect": [
+        "does not rely on sort_by to produce an impression ranking",
+        "states that results come back clicks-sorted regardless of the sort argument",
+        "uses filtered pulls to reach high-impression zero-click queries",
+        "never labels a clicks-sorted list as 'top by impressions'"
+      ]
+    },
+    {
+      "id": "filtered-sweep-admits-its-gaps",
+      "prompt": "Give me every keyword opportunity on the site.",
+      "expect_skill": "gsc-seo-analysis",
+      "expect": [
+        "runs filtered pulls per commercially meaningful term rather than one large unsorted pull",
+        "states plainly that a filtered sweep is targeted, not exhaustive",
+        "does not claim complete coverage of the query set"
+      ]
+    },
+    {
+      "id": "cannibalization-uses-paired-dimensions",
+      "prompt": "Why does this query get impressions but never any clicks?",
+      "expect_skill": "gsc-seo-analysis",
+      "expect": [
+        "pulls dimensions=query,page filtered to that query",
+        "checks whether more than one page draws impressions for it",
+        "if split, recommends consolidating rather than optimising each page separately"
+      ]
+    },
+    {
+      "id": "ai-agent-queries",
+      "prompt": "There are these huge paragraph-long queries in my Search Console data that read like AI prompts. Should I target them?",
+      "expect_skill": "gsc-seo-analysis",
+      "expect": [
+        "identifies them as AI assistants searching on a user's behalf",
+        "advises against targeting the exact wording, which will not repeat",
+        "reads the cluster as a signal about comparison and definition content",
+        "excludes them from CTR averages"
       ]
     }
   ]

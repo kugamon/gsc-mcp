@@ -1,7 +1,7 @@
 ---
 name: gsc-site-profile
 plugin: gsc-seo
-version: 1.1.0
+version: 1.2.0
 description: >
   Create or update the site profile that makes SEO reports specific to one
   business instead of generic. Use when the user says "set up my site profile",
