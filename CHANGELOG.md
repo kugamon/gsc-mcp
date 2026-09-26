@@ -1,5 +1,40 @@
 # Changelog
 
+## v1.3.1 — 2026-09-25
+
+Vendored server 0.4.0 → 0.4.1. A bug-fix sync, no behaviour change on our side.
+
+Upstream 0.4.1 is one commit, and it is both halves of our issue #55:
+
+- **`check_indexing_issues` now runs concurrently** — the same
+  `Semaphore` + `to_thread` + `gather` shape `batch_url_inspection` got in
+  0.4.0, so it no longer times out on 10-URL batches against `sc-domain:`
+  properties. This was the observation tacked onto the end of #55 rather than
+  the main report; upstream took it and fixed it the same day.
+- **The leftover dead `orderBy` is gone** from `get_search_by_page_query`.
+
+Checked on sync: 21 tools unchanged, no new `GSC_*` variables, dependency ranges
+unchanged so the pins hold, tests 51 → 52 and all passing against our copy,
+launcher verified.
+
+### Docs corrected
+
+Two claims in `docs/modernization.md` were true when written and are not now:
+finding 1.2 said `check_indexing_issues` "was not changed and is still a
+sequential loop", and 1.6 said the leftover `orderBy` "remains". Both fixed
+upstream, both corrected here.
+
+No skill changes. The 10-URL cap on both batch tools is unchanged, so the
+indexing guidance still holds.
+
+### Still open upstream
+
+**#52**, the event-loop fix, rebased onto 0.4.1 — its third rebase, since
+0.4.1 rewrote `check_indexing_issues`, which the patch touches. There are now
+**two** synchronous helpers it must skip (`_inspect_single_url` and
+`_check_indexing_single_url`), both already running in worker threads. 20 call
+sites still block the loop.
+
 ## v1.3.0 — 2026-09-15
 
 Upstream shipped 0.4.0 the day after we reported three issues. Two of them are

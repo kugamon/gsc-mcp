@@ -149,11 +149,13 @@ taking 70–100 s against `sc-domain:` properties and exceeding the MCP client's
 instance — the right detail, since `googleapiclient` service objects are not
 thread-safe.
 
-**[code]** `check_indexing_issues` was not changed and is still a sequential
-loop with the same 10-URL cap, so it plausibly has the same timeout. Flagged
-upstream in #55 as an observation rather than a reproduced bug. The 10-URL cap
-also remains on both, despite the 600 QPM quota now being the only real
-constraint.
+**`check_indexing_issues` followed in 0.4.1.** It was left sequential in 0.4.0;
+flagged upstream in #55 as an observation rather than a reproduced bug, and
+fixed the same day with the same `Semaphore` + `to_thread` + `gather` shape.
+
+**The 10-URL cap remains on both**, despite the 600 QPM per-site quota now being
+the only real constraint and concurrency removing the reason the cap existed.
+Not worth pressing: the tools work, and the cap is a defensible default.
 
 Bounded concurrency fixes both: a semaphore of 5–10 over the thread offload from
 1.1, sized against 600 QPM rather than a round number.
@@ -224,8 +226,8 @@ was never in the set. Filters remain the only way to reach it. Upstream
 documents this honestly in a code comment: "Sorting applies within the returned
 page of rows."
 
-One instance of the same dead field remains in `get_search_by_page_query`;
-reported as #55.
+One instance of the same dead field remained in `get_search_by_page_query`;
+reported as #55 and removed in 0.4.1.
 
 The original finding is preserved below.
 
