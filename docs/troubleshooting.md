@@ -76,6 +76,20 @@ propagate.
 - **A browser window opens unexpectedly** on the service-account path: set
   `GSC_SKIP_OAUTH=true` so credential problems surface as errors instead of
   login prompts.
+- **`invalid_scope` on refresh:** a token granted the read-only scope while the
+  server asked for the wider write scope. Fixed upstream in 0.4.2, which reads a
+  token's own stored scopes rather than forcing its own. If you are on an older
+  vendored server, upgrade rather than re-granting.
+
+## Your token file disappeared
+
+Before upstream 0.4.2 a failed refresh deleted `token.json` — so a transient
+network error or a scope mismatch destroyed a working credential, and the next
+run demanded a fresh login. 0.4.2 stops deleting it: a failed refresh now logs a
+warning and falls through to a new OAuth flow, which overwrites the file only on
+success. If that flow cannot run (headless, or no client secrets), the original
+token is left in place to inspect. Nothing to do here beyond being on 0.4.2 or
+later, which this plugin is from v1.4.0.
 
 ## "Property not found" for a site you can see in GSC
 

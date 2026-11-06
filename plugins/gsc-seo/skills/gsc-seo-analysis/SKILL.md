@@ -1,7 +1,7 @@
 ---
 name: gsc-seo-analysis
 plugin: gsc-seo
-version: 1.3.1
+version: 1.4.0
 description: >
   Analyze Google Search Console data and turn it into SEO decisions. Use when the
   user asks to "analyze SEO performance", "check search console data", "review
@@ -156,6 +156,20 @@ the rows you received; it does not change *which* rows you received.
 So `sort_by=impressions` on a 200-row pull gives you the highest-impression
 queries **among the 200 with the most clicks**. A query with 500 impressions and
 zero clicks was never in that set, and no sort argument will bring it in.
+
+### Pagination above 25,000 rows was wrong before 0.4.2
+
+`get_advanced_search_analytics` caps `row_limit` at the API's 25,000 maximum.
+Before **0.4.2**, `has_more` was computed against the number you *asked* for
+rather than the capped number actually used, so a request for 50,000 rows came
+back with 25,000, `has_more: false`, and `next_start_row: null` — the tool
+reporting it had given you everything when it had given you half. Ask for 25,000
+or fewer and the bug never applied. On **0.4.2 and later** both fields are
+computed against the effective limit, so a paging loop can trust them.
+
+Paging still does not escape the previous trap: each page arrives
+clicks-descending, so page two is the next 25,000 *by clicks*, not the rows a
+sort would have promoted.
 
 ### The consequence: high-impression zero-click queries stay out of reach
 

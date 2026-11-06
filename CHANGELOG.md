@@ -1,5 +1,52 @@
 # Changelog
 
+## v1.4.0 — 2026-11-06
+
+Vendored server 0.4.1 → 0.4.2. **Our PR #52 is in it**, which makes this the
+release where the last Tier 1 performance finding from `docs/modernization.md`
+stops being ours to carry.
+
+### The event-loop fix landed upstream
+
+Upstream took [#52](https://github.com/AminForou/mcp-gsc/pull/52) in full — the
+`_execute` helper, all 20 eligible call sites, and the regression test verbatim
+— and credited it in the release commit rather than merging the branch. Every
+single-shot tool now runs its Google call in a worker thread, so concurrent tool
+calls overlap instead of serialising. The two synchronous batch helpers stay
+blocking on purpose; their callers already dispatch them to threads.
+
+One deliberate difference from what we proposed: upstream used
+`asyncio.to_thread` rather than `anyio.to_thread.run_sync`, the alternative
+offered in the PR discussion, for consistency with the `asyncio.to_thread` calls
+already in the batch paths. Same mechanism on the asyncio backend.
+
+### Also in 0.4.2
+
+- **Read-only OAuth scope by default** (#56). The server now picks its scope
+  from `GSC_ALLOW_DESTRUCTIVE`, which `.mcp.json` sets to `false`, so this
+  plugin asks for `webmasters.readonly`. `docs/setup-oauth.md` updated — it had
+  been telling people to grant the wider write scope.
+- **A failed refresh no longer deletes `token.json`** (#56). A transient network
+  error used to destroy a working credential. New troubleshooting entry covers
+  it.
+- **Pagination above 25,000 rows is correct** (#62). `has_more` and
+  `next_start_row` were computed against the requested limit rather than the
+  capped one, so a 50,000-row request reported itself complete at 25,000. The
+  analysis skill now documents this, including that paging still cannot escape
+  the clicks-descending ordering.
+- Optional arguments accept null (#58); `mcp[cli]` floor raised to `>=1.27.2`,
+  which our exact pins already satisfy, so no pin moved.
+
+Checked on sync: 21 tools unchanged, no new `GSC_*` variables, 10-URL batch cap
+unchanged, tests 52 → 55 and all passing against our copy, launcher verified,
+both vendored files byte-identical to upstream.
+
+### Still open upstream
+
+**#53** — errors are returned as successful results; `isError` is never set.
+Verified still true in 0.4.2. It is the one finding from our original review
+that has neither been fixed nor superseded.
+
 ## v1.3.1 — 2026-09-25
 
 Vendored server 0.4.0 → 0.4.1. A bug-fix sync, no behaviour change on our side.

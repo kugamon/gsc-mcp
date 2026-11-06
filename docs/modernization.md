@@ -1,9 +1,18 @@
 # Modernization review — the vendored server
 
-A review of `plugins/gsc-seo/server/gsc_server.py` (1,705 lines, 21 tools,
-upstream v0.3.3 / commit `b3f2ab8`) against the current Model Context Protocol
+A review of `plugins/gsc-seo/server/gsc_server.py` (1,801 lines, 21 tools,
+upstream v0.4.2 / commit `45291df`) against the current Model Context Protocol
 specification, the MCP Python SDK, and Google's Search Console API
-documentation. Last verified 2026-09-14.
+documentation. First written against v0.3.3 / `b3f2ab8` on 2026-09-14; findings
+re-checked against each sync since, most recently 2026-11-06.
+
+**Three of the six Tier 1 findings have since been fixed upstream** — 1.1, 1.2
+and 1.6 — each from a report or a PR that came out of this review. They are
+struck through in place rather than deleted, with the original text preserved
+beneath, so the document stays readable as a record of what was found and what
+became of it. Findings 1.3 (no retry or backoff), 1.4 (naive local time) and 1.5
+(incomplete-data signal discarded) were re-checked against 0.4.2 and all three
+still stand.
 
 The server works and is actively maintained upstream. Nothing here is a bug
 report. It is a list of places where the code predates capabilities that now
@@ -61,7 +70,31 @@ reason v2's release was a non-event here, and it is also why an unpinned
 
 ## Tier 1 — Correctness and performance
 
-### 1.1 Every tool is `async def` and almost none of them await anything
+### 1.1 ~~Every tool is `async def` and almost none of them await anything~~ — FIXED UPSTREAM in 0.4.2
+
+**Submitted as AminForou/mcp-gsc#52 on 2026-09-15, shipped 2026-11-06.** The
+maintainer took the change in full — the `_execute` helper, all 20 eligible call
+sites, and the regression test verbatim — crediting #52 in the release commit
+rather than merging the branch. The PR is therefore closed as superseded, not
+merged.
+
+**[code]** Confirmed in the vendored 0.4.2: one `_execute` helper, 20
+`await _execute(...)` sites, and the two synchronous batch helpers
+(`_inspect_single_url`, `_check_indexing_single_url`) deliberately left blocking
+because their callers already dispatch them to worker threads.
+
+**One deliberate difference from the proposal below.** Upstream used
+`asyncio.to_thread`, not `anyio.to_thread.run_sync`. That was the alternative
+offered in the PR discussion, for consistency with the `asyncio.to_thread` calls
+already in the batch paths. The anyio argument below still stands on its merits
+— it is the SDK's own choice and stays correct under a trio backend — but on the
+asyncio backend the two are the same mechanism, and consistency within one file
+is worth more than theoretical backend portability. **No local patch is carried
+here**; the vendored file is byte-identical to upstream, as always.
+
+The original finding is preserved below.
+
+---
 
 **Wrapper: no. Upstream: yes. Impact: high. Effort: low.**
 
@@ -127,7 +160,10 @@ a rewrite of the transport layer, not a patch, and is out of scope here.
 (`anyio.to_thread.current_default_thread_limiter().total_tokens` → 40), which
 bounds the blast radius without extra configuration.
 
-### 1.2 Batch inspection is a sequential blocking loop
+### 1.2 ~~Batch inspection is a sequential blocking loop~~ — FIXED UPSTREAM in 0.4.0 and 0.4.1
+
+Both halves are now fixed; the narrative below records how. Line numbers in this
+section are from the original 0.3.3 review and have since shifted.
 
 **Wrapper: no. Upstream: yes. Impact: high. Effort: low.**
 

@@ -23,8 +23,14 @@ Same as the service-account setup:
 1. User type **External** unless you are on Workspace and every user is
    internal — External is fine for a personal tool.
 2. Fill in app name and your email.
-3. Scopes: add `https://www.googleapis.com/auth/webmasters`. This is the only
-   scope the server requests.
+3. Scopes: add `https://www.googleapis.com/auth/webmasters.readonly`. Since
+   upstream 0.4.2 the server picks its scope from `GSC_ALLOW_DESTRUCTIVE`, which
+   `.mcp.json` sets to `false`, so read-only is what it asks for and read-only
+   is all the enabled tools need. Only add the wider
+   `https://www.googleapis.com/auth/webmasters` if you deliberately turn the
+   destructive tools on — and note that granting a scope *narrower* than the one
+   the server requests is what made token refresh fail with `invalid_scope`
+   before 0.4.2.
 4. Under **Test users**, add the Google account that owns the Search Console
    properties. While the app is in Testing, only listed test users can sign in —
    forgetting this produces an "access blocked" error at login.

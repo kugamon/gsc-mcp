@@ -8,28 +8,37 @@ MIT licensed. The upstream license is preserved here as `LICENSE.upstream`.
 | --- | --- |
 | Upstream repo | https://github.com/AminForou/mcp-gsc |
 | Upstream package | `mcp-search-console` on PyPI |
-| Vendored version | 0.4.1 |
-| Vendored commit | `d49eea9e5efb5eb645b722249303179b2c150b49` (2026-09-15) |
-| Commit subject | `fix: run check_indexing_issues concurrently, drop dead orderBy (#55)` |
-| `gsc_server.py` SHA-256 (first 16) | `7efec932c95d5446` |
-| `test_gsc_server.py` SHA-256 (first 16) | `e38439eba3d71cbb` |
+| Vendored version | 0.4.2 |
+| Vendored commit | `45291df024c7873b2042c83d7add70ced7bb621f` (2026-11-06) |
+| Commit subject | `Release 0.4.2: fix OAuth read-only scope + token deletion (#56), offload blocking calls (#52), fix capped pagination (#62), optional null args (#58), bump mcp floor to >=1.27.2 (#40)` |
+| `gsc_server.py` SHA-256 (first 16) | `ac1555717865c1c9` |
+| `test_gsc_server.py` SHA-256 (first 16) | `d0c2f8ecb56c176e` |
 | Local modifications | **None.** Not one line, in either file. |
 
 ### Re-sync history
 
 | Date | From → to | Why |
 | --- | --- | --- |
+| 2026-11-06 | 0.4.1 → 0.4.2 | Carries our PR #52: every single-shot tool now runs its Google call in a worker thread, so concurrent tool calls stop serialising. Also fixes the OAuth scope and token-deletion bugs in #56, `has_more` / `next_start_row` above the 25,000-row cap (#62), and null-able optional args (#58). |
 | 2026-09-25 | 0.4.0 → 0.4.1 | Both halves of our #55: `check_indexing_issues` now runs concurrently (the same fix #31 got for `batch_url_inspection`), and the leftover dead `orderBy` is gone from `get_search_by_page_query`. |
 | 2026-09-15 | 0.3.3 → 0.4.0 | Upstream fixed three things this plugin had reported or relied on: `sort_by` now sorts client-side (#54), `batch_url_inspection` runs concurrently so 10-URL batches stop timing out (#31), and bare `except:` clauses are narrowed (#53). Also fixes rich-result reporting (#46, #48) and the `compare_search_periods` delta direction (#42). |
 
-Checked on the 0.4.1 sync: tool count unchanged at 21, no new `GSC_*`
-environment variables, dependency ranges unchanged so the pins below still hold,
-test count 51 → 52. The 10-URL cap on both batch tools is unchanged, so the
-skills' guidance still holds.
+Checked on the 0.4.2 sync: tool count unchanged at 21, no new `GSC_*`
+environment variables, test count 52 → 55. Upstream raised its `mcp[cli]` floor
+to `>=1.27.2`; the exact pins here already satisfy every upstream floor, so they
+are unchanged. The 10-URL cap on both batch tools is unchanged, and
+`get_advanced_search_analytics` still sorts *after* the response, so the skills'
+guidance — sorting reorders only the page you fetched — still holds.
+
+One behavioural change worth knowing: upstream now requests the **read-only**
+OAuth scope unless `GSC_ALLOW_DESTRUCTIVE` is true. `.mcp.json` here sets it
+false, so this plugin asks for the narrower scope automatically. Upstream also
+stopped deleting `token.json` when a refresh fails, which is what made a
+transient network error destroy a working credential (#56).
 
 Two files are vendored: the server and its test suite. The tests are mocked with
 `unittest.mock` and need no Google credentials, so they run in CI on every push
-— 43 tests covering auth, analytics, indexing, and sitemaps. Without them CI
+— 55 tests covering auth, analytics, indexing, and sitemaps. Without them CI
 would prove only that the server *starts*, never that a tool returns the right
 thing.
 
