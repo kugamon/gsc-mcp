@@ -221,20 +221,11 @@ Everything else: [docs/troubleshooting.md](docs/troubleshooting.md).
 
 ## Contributing
 
-PRs welcome for analysis workflows, additional GSC failure modes, and
-corrections where a skill states something that is no longer true — Google
-changes these behaviors and stale guidance is worse than none.
+This plugin is maintained by Kugamon. Outside pull requests aren't accepted, but issues are welcome: if a skill states something about Search Console that is no longer true, or a command or tool fails, open an [issue](https://github.com/kugamon/gsc-mcp/issues) with what you ran and what you saw.
 
-Two rules:
+The bundled server, `plugins/gsc-seo/server/gsc_server.py`, is an unmodified copy of [mcp-gsc](https://github.com/AminForou/mcp-gsc); problems in it belong upstream.
 
-- **Keep skills terse.** They are prompts, not documentation. If it does not
-  change what Claude does, it belongs in `docs/`.
-- **Do not modify `plugins/gsc-seo/server/gsc_server.py`.** It is a verbatim
-  upstream copy and CI checks its hash. Server changes go to
-  [upstream](https://github.com/AminForou/mcp-gsc) as a PR.
-
-Run `python3 scripts/validate_skills.py` and `./scripts/smoke-test.sh` before
-opening a PR; CI runs both.
+The MIT license lets you fork and adapt it for your own use.
 
 ## Related projects
 
